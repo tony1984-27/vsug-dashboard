@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>VSUG · Dirección de Operaciones</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f5f7fb; --panel:#ffffff; --ink:#172033; --muted:#6b7280; --line:#e5e7eb;
+  --navy:#16243d; --navy2:#23385d; --green:#138a5b; --greenbg:#e9f7f1;
+  --amber:#a96500; --amberbg:#fff6df; --red:#c53b36; --redbg:#fff0ef;
+  --blue:#3767d6; --bluebg:#eef3ff; --shadow:0 8px 28px rgba(15,23,42,.08);
+  --radius:18px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.topbar{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:24px 28px 26px;position:sticky;top:0;z-index:20;box-shadow:0 4px 18px rgba(0,0,0,.15)}
+.toprow{display:flex;gap:18px;align-items:center;justify-content:space-between;max-width:1500px;margin:0 auto}
+.brand h1{font-size:24px;margin:0 0 3px;font-weight:750;letter-spacing:-.02em}
+.brand p{margin:0;color:#dbe4f3;font-size:13px}
+.controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.control,.btn{height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.1);color:#fff;padding:0 13px}
+.control option{color:#111}
+.btn{font-weight:700;background:#fff;color:var(--navy);border:none;padding:0 16px}
+.btn.secondary{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.22)}
+.shell{max-width:1500px;margin:0 auto;padding:24px 28px 50px}
+.context{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.context h2{font-size:22px;margin:0}
+.context .meta{font-size:13px;color:var(--muted)}
+.threshold{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.threshold input{width:72px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.money-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.money-kpi{background:linear-gradient(135deg,#ffffff,#f8fafc);border:1px solid var(--line);border-radius:var(--radius);padding:17px 18px;box-shadow:var(--shadow)}
+.money-kpi-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.money-kpi-title{font-size:14px;font-weight:780}
+.money-kpi-source{font-size:11px;color:var(--muted);background:#f1f5f9;border-radius:999px;padding:5px 8px}
+.money-kpi-value{font-size:30px;font-weight:820;letter-spacing:-.04em;margin-top:12px}
+.money-kpi-foot{font-size:12px;color:var(--muted);margin-top:6px}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:17px;box-shadow:var(--shadow)}
+.kpi-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.kpi-title{font-size:14px;font-weight:750}
+.pill{font-size:12px;font-weight:750;border-radius:999px;padding:6px 9px;background:var(--bluebg);color:var(--blue)}
+.kpi-value{display:flex;align-items:baseline;gap:9px;margin-top:13px}
+.kpi-value strong{font-size:30px;letter-spacing:-.04em}
+.kpi-value span{font-size:13px;color:var(--muted)}
+.progress{height:9px;border-radius:999px;background:#eef1f5;margin:13px 0 9px;overflow:hidden}
+.progress>i{display:block;height:100%;border-radius:999px;background:var(--blue)}
+.kpi-foot{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-bottom:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+.panel h3{margin:0 0 4px;font-size:16px}
+.panel .sub{color:var(--muted);font-size:12px;margin-bottom:15px}
+.status-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.status-card{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff;text-align:left;transition:.15s transform,.15s box-shadow}
+.status-card:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(15,23,42,.08)}
+.status-card .n{display:block;font-size:26px;font-weight:800;letter-spacing:-.04em}
+.status-card .l{font-size:12px;color:var(--muted)}
+.status-card.green{background:var(--greenbg);border-color:#ccebdd}.status-card.green .n{color:var(--green)}
+.status-card.amber{background:var(--amberbg);border-color:#f0dfb2}.status-card.amber .n{color:var(--amber)}
+.status-card.red{background:var(--redbg);border-color:#f3d4d2}.status-card.red .n{color:var(--red)}
+.status-card.gray{background:#f4f5f7}.status-card.gray .n{color:#586174}
+.opportunity{display:flex;gap:14px;align-items:flex-start;padding:13px 0;border-top:1px solid var(--line)}
+.opportunity:first-of-type{border-top:0;padding-top:0}
+.ico{width:36px;height:36px;border-radius:12px;background:var(--bluebg);display:grid;place-items:center;font-size:18px;flex:0 0 auto}
+.opp-title{font-weight:750;font-size:14px}.opp-copy{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
+.toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
+.search{min-width:260px;flex:1;max-width:470px;border:1px solid var(--line);padding:10px 12px;border-radius:12px;background:#fff}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:14px}
+table{width:100%;border-collapse:separate;border-spacing:0;min-width:980px}
+th{position:sticky;top:0;background:#f8fafc;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#667085;border-bottom:1px solid var(--line);padding:11px 12px;z-index:1}
+td{padding:12px;border-bottom:1px solid #eef0f3;font-size:13px;vertical-align:middle}
+tbody tr:hover{background:#fafbfe}
+.centerbtn{border:0;background:transparent;color:var(--navy);font-weight:760;padding:0;text-align:left}
+.small{font-size:11px;color:var(--muted)}
+.metricbar{display:flex;align-items:center;gap:7px;min-width:140px}
+.metricbar .track{width:70px;height:7px;border-radius:999px;background:#eef1f5;overflow:hidden}
+.metricbar .track i{display:block;height:100%;border-radius:999px}
+.metricbar b{font-size:12px;min-width:42px}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:760}
+.badge.green{color:var(--green);background:var(--greenbg)}
+.badge.amber{color:var(--amber);background:var(--amberbg)}
+.badge.red{color:var(--red);background:var(--redbg)}
+.badge.gray{color:#5c6677;background:#eef0f3}
+.delta.pos{color:var(--green);font-weight:750}.delta.neg{color:var(--red);font-weight:750}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.modalback{display:none;position:fixed;inset:0;background:rgba(10,18,32,.55);z-index:100;align-items:center;justify-content:center;padding:24px}
+.modalback.open{display:flex}
+.modal{background:#fff;border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.3);width:min(980px,96vw);max-height:90vh;overflow:auto}
+.modal.smallmodal{width:min(650px,96vw)}
+.modalhead{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding:20px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:4}
+.modalhead h3{margin:0}.modalhead p{margin:4px 0 0;color:var(--muted);font-size:12px}
+.close{border:0;background:#eef1f5;border-radius:10px;width:36px;height:36px;font-size:20px}
+.modalbody{padding:20px 22px}
+.drop{border:2px dashed #cfd6e4;border-radius:16px;padding:28px;text-align:center;background:#fafbfe}
+.drop strong{display:block;margin-bottom:5px}.drop p{font-size:12px;color:var(--muted);margin:0 0 14px}
+.filebtn{display:inline-flex;background:var(--navy);color:#fff;border:0;border-radius:11px;padding:10px 14px;font-weight:700}
+.notice{padding:11px 12px;border-radius:11px;font-size:12px;margin-top:13px;background:var(--bluebg);color:#274f9f}
+.notice.err{background:var(--redbg);color:var(--red)}
+.listitem{display:grid;grid-template-columns:1fr auto;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.listitem:last-child{border-bottom:0}
+.detailgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.detailbox{border:1px solid var(--line);border-radius:13px;padding:12px}
+.detailbox b{font-size:20px}.detailbox span{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+.daytable{width:100%;min-width:760px}.daytable th{position:static}
+.importstatus{font-size:12px;margin-top:9px;color:var(--muted)}
+@media(max-width:1000px){.money-kpis{grid-template-columns:1fr 1fr}.kpis{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.status-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.topbar{padding:18px}.shell{padding:18px}.toprow{align-items:flex-start}.controls{justify-content:flex-start}.money-kpis{grid-template-columns:1fr}.detailgrid{grid-template-columns:repeat(2,1fr)}}
+
+.zone-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.capturebar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 16px}
+.zone-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.zonebox{border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff}
+.zonebox b{display:block;font-size:20px;letter-spacing:-.03em}.zonebox span{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+.zone-local{border:1px solid var(--line);border-radius:16px;margin:0 0 16px;overflow:hidden;background:#fff}
+.zone-local-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:14px 16px;background:#f8fafc;border-bottom:1px solid var(--line)}
+.zone-local-head h4{margin:0;font-size:16px}.zone-local-head .small{margin-top:3px}
+.zone-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 14px}
+.zone-kpis .detailbox{padding:10px}
+.zone-daily{padding:0 14px 14px}
+.zone-capture-mode .modalhead,.zone-capture-mode .capturebar .noncapture{display:none!important}
+.zone-capture-mode .modal{max-height:none;width:min(1180px,99vw)}
+.zone-capture-mode .modalbody{padding-top:14px}
+.zone-capture-mode .zone-local{break-inside:avoid}
+.zone-capture-mode .zone-local-head{background:#fff}
+.zone-capture-mode .zone-summary{grid-template-columns:repeat(5,1fr)}
+
+.zone-pagebar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:8px 0 14px}
+.zone-pagebuttons{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.zone-pagebtn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer}
+.zone-pagebtn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.zone-capture-cardgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.zone-capture-card{border:1px solid var(--line);border-radius:16px;background:#fff;padding:14px 16px;box-shadow:0 4px 16px rgba(15,23,42,.04)}
+.zone-capture-card h4{margin:0 0 6px;font-size:19px;line-height:1.1}
+.zone-capture-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.zone-capture-meta{font-size:12px;color:var(--muted)}
+.zone-targets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+.zone-target{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#f8fafc}
+.zone-target b{display:block;font-size:22px;letter-spacing:-.03em;margin-bottom:3px}
+.zone-target span{font-size:12px;color:var(--muted)}
+.zone-total-target{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.zone-total-target b{font-size:18px}
+.zone-capture-note{margin:6px 0 14px;font-size:13px;color:var(--muted)}
+@media(max-width:1000px){.zone-capture-cardgrid{grid-template-columns:1fr}.zone-targets{grid-template-columns:1fr}}
+
+@media(max-width:1000px){.zone-summary{grid-template-columns:repeat(2,1fr)}.zone-kpis{grid-template-columns:repeat(2,1fr)}}
+
+
+@media print{
+  body{background:#fff}
+  .topbar,.shell,.modalback:not(#zoneModal),#zoneModal .modalhead .close,.noncapture{display:none!important}
+  #zoneModal{display:block!important;position:static;background:#fff;padding:0}
+  #zoneModal .modal{width:100%!important;max-height:none!important;box-shadow:none;border-radius:0}
+  #zoneModal .modalbody{padding:0}
+  .zone-local{break-inside:avoid;box-shadow:none}
+}
+
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="toprow">
+    <div class="brand">
+      <h1>Venta sugerida · Dirección de Operaciones</h1>
+      <p>Objetivo vs. real por centro, AM y oportunidad comercial</p>
+    </div>
+    <div class="controls">
+      <select id="weekSelect" class="control"></select>
+      <select id="amSelect" class="control"><option value="">Todos los AM</option></select>
+      <button class="btn secondary" id="openZone">Consolidado por zona</button>
+      <button class="btn secondary" id="openImport">Importar Excel</button>
+    </div>
+  </div>
+</header>
+
+<main class="shell">
+  <div class="context">
+    <div>
+      <h2 id="periodTitle">Semana</h2>
+      <div class="meta" id="dataMeta"></div>
+    </div>
+    <label class="threshold">“En rango” desde
+      <input id="rangeThreshold" type="number" min="50" max="100" step="1" value="95"> %
+    </label>
+  </div>
+
+  <section class="money-kpis" id="moneyKpis"></section>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="grid2">
+    <div class="panel">
+      <h3>Situación de centros</h3>
+      <div class="sub">Haz clic para ver quiénes están en cada grupo.</div>
+      <div class="status-grid" id="statusCards"></div>
+    </div>
+    <div class="panel">
+      <h3>Palancas recomendadas</h3>
+      <div class="sub">Oportunidad basada en el añadido más grande del periodo seleccionado.</div>
+      <div id="opportunities"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="toolbar">
+      <div>
+        <h3 style="margin:0">Centros · objetivo vs. real</h3>
+        <div class="sub" style="margin:3px 0 0">Prioriza por cumplimiento y entra al detalle diario.</div>
+      </div>
+      <input class="search" id="search" placeholder="Buscar centro o AM…">
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th>AM</th><th>Centro</th><th>Estado</th><th>Cumplimiento</th><th>Venta sugerida €</th>
+          <th>2ª bebida</th><th>Algo para picar</th><th>Café</th><th>Diferencia</th><th>Siguiente foco</th>
+        </tr></thead>
+        <tbody id="centersBody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<div class="modalback" id="importModal">
+  <div class="modal smallmodal">
+    <div class="modalhead"><div><h3>Importar datos</h3><p>Detecta “OBJ VS REAL …”, RESUMEN y exports semanales con € TOTAL VS.</p></div><button class="close" data-close>×</button></div>
+    <div class="modalbody">
+      <div class="drop">
+        <strong>Selecciona el Excel de objetivos</strong>
+        <p>Se leerán automáticamente <b>OBJ VS REAL</b>, <b>RESUMEN</b> y <b>Export</b>. En Export se usa <b>LOCAL</b> + <b>€ TOTAL VS</b> y se detecta la semana desde AÑO/SEMANA.</p>
+        <label class="filebtn">Elegir archivo<input id="fileInput" type="file" accept=".xlsx,.xls" hidden></label>
+      </div>
+      <div id="importStatus" class="importstatus">El dashboard ya incluye los datos del Excel adjunto como estado inicial. Al importar otro Excel, las semanas y sus KPI de RESUMEN se incorporan automáticamente.</div>
+      <div class="notice">La segunda semana aparece como “Pendiente” mientras las columnas REAL estén vacías. No se penaliza como incumplimiento.</div>
+    </div>
+  </div>
+</div>
+
+<div class="modalback" id="listModal">
+  <div class="modal">
+    <div class="modalhead"><div><h3 id="listTitle">Centros</h3><p id="listSub"></p></div><button class="close" data-close>×</button></div>
+    <div class="modalbody" id="listBody"></div>
+  </div>
+</div>
+
+
+<div class="modalback" id="zoneModal">
+  <div class="modal" style="width:min(1180px,97vw)">
+    <div class="modalhead">
+      <div>
+        <h3 id="zoneTitle">Consolidado por zona</h3>
+        <p id="zoneSub">Todos los locales de la zona con los mismos datos del detalle individual.</p>
+      </div>
+      <button class="close" data-close>×</button>
+    </div>
+    <div class="modalbody">
+      <div class="capturebar">
+        <div class="zone-actions">
+          <label class="small">Zona / AM
+            <select id="zoneSelect" style="margin-left:6px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff"></select>
+          </label>
+          <span class="small" id="zoneWeekLabel"></span>
+        </div>
+        <div class="zone-actions noncapture">
+          <button class="filebtn" id="toggleCapture" type="button">Vista captura</button>
+          <button class="filebtn" id="printZone" type="button" style="background:#fff;color:var(--navy);border:1px solid var(--line)">Imprimir / PDF</button>
+        </div>
+      </div>
+      <div id="zoneBody"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modalback" id="centerModal">
+  <div class="modal">
+    <div class="modalhead"><div><h3 id="centerTitle">Centro</h3><p id="centerSub"></p></div><button class="close" data-close>×</button></div>
+    <div class="modalbody" id="centerBody"></div>
+  </div>
+</div>
+
+<script>
+const EMBEDDED_DATA = {"OBJ VS REAL 14 AL 20":{"label":"14 AL 20","centers":[{"am":"JOSE","center":"ALAMEDA","days":{"LUNES":{"objective":{"drink":45.803615321079924,"app":49.43512722785579,"coffee":21.071522753734236},"real":{"drink":23,"app":14,"coffee":23}},"MARTES":{"objective":{"drink":54.241123406542016,"app":27.071617291444838,"coffee":33.46653613828379},"real":{"drink":51,"app":22,"coffee":18}},"MIÉRCOLES":{"objective":{"drink":38.57146553354099,"app":28.248644130203306,"coffee":26.02952810755406},"real":{"drink":21,"app":17,"coffee":32}},"JUEVES":{"objective":{"drink":44.59825702315677,"app":52.966207744131204,"coffee":37.18504015364866},"real":{"drink":73,"app":59,"coffee":20}},"VIERNES":{"objective":{"drink":86.78579745046723,"app":49.43512722785579,"coffee":35.9455388151937},"real":{"drink":66,"app":44,"coffee":33}},"SÁBADO":{"objective":{"drink":61.47327319408095,"app":61.2053956154405,"coffee":60.73556558429281},"real":{"drink":134,"app":59,"coffee":59}},"DOMINGO":{"objective":{"drink":55.44648170446518,"app":45.90404671158037,"coffee":58.25656290738289},"real":{"drink":59,"app":40,"coffee":48}}}},{"am":"JOSE","center":"ALBACETE","days":{"LUNES":{"objective":{"drink":52.792527040314646,"app":12.539872318085177,"coffee":25.990167158308754},"real":{"drink":87,"app":30,"coffee":36}},"MARTES":{"objective":{"drink":118.58013765978369,"app":22.571770172553318,"coffee":42.23402163225172},"real":{"drink":61,"app":26,"coffee":21}},"MIÉRCOLES":{"objective":{"drink":27.614552605703047,"app":50.15948927234071,"coffee":28.426745329400198},"real":{"drink":32,"app":77,"coffee":24}},"JUEVES":{"objective":{"drink":103.96066863323502,"app":35.94763397851084,"coffee":22.74139626352016},"real":{"drink":25,"app":26,"coffee":26}},"VIERNES":{"objective":{"drink":71.47295968534907,"app":50.15948927234071,"coffee":31.67551622418879},"real":{"drink":35,"app":34,"coffee":14}},"SÁBADO":{"objective":{"drink":89.34119960668633,"app":78.58319986000045,"coffee":92.58997050147492},"real":{"drink":100,"app":44,"coffee":21}},"DOMINGO":{"objective":{"drink":27.614552605703047,"app":43.471557369361946,"coffee":28.426745329400198},"real":{"drink":42,"app":47,"coffee":24}}}},{"am":"ALEXIS","center":"ALICANTE","days":{"LUNES":{"objective":{"drink":36.827969618899836,"app":31.02815622161671,"coffee":21.40520961457712},"real":{"drink":32,"app":24,"coffee":14}},"MARTES":{"objective":{"drink":23.528980589852672,"app":17.01544050862852,"coffee":14.645669736289609},"real":{"drink":18,"app":33,"coffee":15}},"MIÉRCOLES":{"objective":{"drink":40.91996624322204,"app":19.017257039055405,"coffee":24.784979553720877},"real":{"drink":43,"app":61,"coffee":14}},"JUEVES":{"objective":{"drink":21.482982277691573,"app":26.0236148955495,"coffee":15.772259716004195},"real":{"drink":14,"app":24,"coffee":7}},"VIERNES":{"objective":{"drink":55.24195442834975,"app":54.049046321525886,"coffee":32.67110941172297},"real":{"drink":54,"app":48,"coffee":20}},"SÁBADO":{"objective":{"drink":104.34591392021618,"app":91.08265213442326,"coffee":22.53179959429171},"real":{"drink":81,"app":64,"coffee":36}},"DOMINGO":{"objective":{"drink":30.689974682416526,"app":52.047229791099,"coffee":22.53179959429171},"real":{"drink":46,"app":10,"coffee":21}}}},{"am":"ALEXIS","center":"ALMERIA","days":{"LUNES":{"objective":{"drink":8.571428571428571,"app":24.769982993197278,"coffee":8.675595238095237},"real":{"drink":21,"app":14,"coffee":2}},"MARTES":{"objective":{"drink":8.571428571428571,"app":11.846513605442176,"coffee":2.478741496598639},"real":{"drink":20,"app":20,"coffee":5}},"MIÉRCOLES":{"objective":{"drink":17.142857142857142,"app":17.231292517006803,"coffee":6.196853741496597},"real":{"drink":14,"app":14,"coffee":4}},"JUEVES":{"objective":{"drink":24.642857142857142,"app":10.76955782312925,"coffee":6.196853741496597},"real":{"drink":20,"app":6,"coffee":7}},"VIERNES":{"objective":{"drink":17.142857142857142,"app":5.384778911564625,"coffee":9.914965986394556},"real":{"drink":46,"app":22,"coffee":6}},"SÁBADO":{"objective":{"drink":66.42857142857143,"app":22.616071428571427,"coffee":11.154336734693876},"real":{"drink":37,"app":26,"coffee":8}},"DOMINGO":{"objective":{"drink":36.42857142857142,"app":10.76955782312925,"coffee":13.633078231292515},"real":{"drink":14,"app":18,"coffee":null}}}},{"am":"ANDREA","center":"ARIBAU","days":{"LUNES":{"objective":{"drink":16.36744094862918,"app":10.773912413466853,"coffee":8.88749980466558},"real":{"drink":33,"app":30,"coffee":11}},"MARTES":{"objective":{"drink":12.860132173922926,"app":16.759419309837327,"coffee":25.3928565847588},"real":{"drink":34,"app":19,"coffee":22}},"MIÉRCOLES":{"objective":{"drink":44.425911146279205,"app":16.759419309837327,"coffee":19.044642438569102},"real":{"drink":51,"app":16,"coffee":22}},"JUEVES":{"objective":{"drink":63.131557944712554,"app":58.657967584430644,"coffee":20.31428526780704},"real":{"drink":50,"app":14,"coffee":16}},"VIERNES":{"objective":{"drink":30.39667604745419,"app":25.139128964755994,"coffee":24.12321375552086},"real":{"drink":66,"app":32,"coffee":20}},"SÁBADO":{"objective":{"drink":57.286043320202126,"app":31.124635861126464,"coffee":17.77499960933116},"real":{"drink":115,"app":32,"coffee":28}},"DOMINGO":{"objective":{"drink":30.39667604745419,"app":21.547824826933706,"coffee":12.6964282923794},"real":{"drink":18,"app":6,"coffee":19}}}},{"am":"NACHO","center":"BALBOA","days":{"LUNES":{"objective":{"drink":104.0183066361556,"app":24.72666296624059,"coffee":17.347542009436086},"real":{"drink":96,"app":31,"coffee":15}},"MARTES":{"objective":{"drink":95.35011441647596,"app":14.611209934596713,"coffee":16.108431865904937},"real":{"drink":53,"app":10,"coffee":24}},"MIÉRCOLES":{"objective":{"drink":48.75858123569794,"app":64.0645358670779,"coffee":27.260423157685278},"real":{"drink":55,"app":20,"coffee":23}},"JUEVES":{"objective":{"drink":71.51258581235699,"app":30.346359094931636,"coffee":14.869321722373789},"real":{"drink":52,"app":42,"coffee":10}},"VIERNES":{"objective":{"drink":85.59839816933639,"app":30.346359094931636,"coffee":24.78220287062298},"real":{"drink":122,"app":39,"coffee":13}},"SÁBADO":{"objective":{"drink":74.76315789473684,"app":20.230906063287755,"coffee":12.39110143531149},"real":{"drink":101,"app":19,"coffee":16}},"DOMINGO":{"objective":{"drink":42.25743707093822,"app":11.239392257382088,"coffee":2.4782202870622982},"real":{"drink":53,"app":19,"coffee":12}}}},{"am":"ANDREA","center":"BARCELONA CAN SEGALAR","days":{"LUNES":{"objective":{"drink":18.301565010352235,"app":23.984254813112226,"coffee":22.527765502260486},"real":{"drink":26,"app":25,"coffee":25}},"MARTES":{"objective":{"drink":36.60313002070447,"app":15.989503208741484,"coffee":20.024680446453768},"real":{"drink":10,"app":22,"coffee":17}},"MIÉRCOLES":{"objective":{"drink":21.96187801242268,"app":31.979006417482967,"coffee":18.773137918550407},"real":{"drink":8,"app":11,"coffee":10}},"JUEVES":{"objective":{"drink":32.942817018634024,"app":28.55268430132408,"coffee":12.515425279033604},"real":{"drink":28,"app":28,"coffee":9}},"VIERNES":{"objective":{"drink":53.684590697033215,"app":30.836899045430005,"coffee":15.018510334840325},"real":{"drink":23,"app":36,"coffee":39}},"SÁBADO":{"objective":{"drink":26.842295348516608,"app":37.68954327774779,"coffee":21.276222974357125},"real":{"drink":66,"app":36,"coffee":15}},"DOMINGO":{"objective":{"drink":25.622191014493126,"app":27.410576929271116,"coffee":25.030850558067208},"real":{"drink":40,"app":12,"coffee":13}}}},{"am":"ANDREA","center":"BARCELONA EIXAMPLE","days":{"LUNES":{"objective":{"drink":19.426747850237675,"app":18.139657106232978,"coffee":27.278926098025597},"real":{"drink":62,"app":41,"coffee":20}},"MARTES":{"objective":{"drink":42.73884527052289,"app":6.046552368744326,"coffee":21.823140878420478},"real":{"drink":61,"app":9,"coffee":18}},"MIÉRCOLES":{"objective":{"drink":14.246281756840961,"app":10.58146664530257,"coffee":10.911570439210239},"real":{"drink":22,"app":1,"coffee":15}},"JUEVES":{"objective":{"drink":41.4437287471737,"app":22.67457138279122,"coffee":23.187087183321758},"real":{"drink":25,"app":4,"coffee":23}},"VIERNES":{"objective":{"drink":67.34605921415728,"app":31.744399935907712,"coffee":28.64287240292688},"real":{"drink":116,"app":13,"coffee":17}},"SÁBADO":{"objective":{"drink":37.55837917712616,"app":37.79095230465204,"coffee":19.09524826861792},"real":{"drink":32,"app":23,"coffee":26}},"DOMINGO":{"objective":{"drink":12.951165233491782,"app":9.069828553116489,"coffee":15.00340935391408},"real":{"drink":29,"app":14,"coffee":13}}}},{"am":"TONY","center":"BENICASSIM","days":{"LUNES":{"objective":{"drink":54.048667439165705,"app":46.99884125144844,"coffee":16.78724544120392},"real":{"drink":22,"app":11,"coffee":8}},"MARTES":{"objective":{"drink":39.1657010428737,"app":24.28273464658169,"coffee":10.072347264722351},"real":{"drink":19,"app":11,"coffee":6}},"MIÉRCOLES":{"objective":{"drink":41.51564310544612,"app":29.765932792584007,"coffee":12.59043408090294},"real":{"drink":53,"app":24,"coffee":14}},"JUEVES":{"objective":{"drink":36.0324449594438,"app":21.149478563151796,"coffee":6.714898176481567},"real":{"drink":23,"app":20,"coffee":3}},"VIERNES":{"objective":{"drink":57.181923522595596,"app":45.43221320973349,"coffee":9.232984992662153},"real":{"drink":38,"app":27,"coffee":16}},"SÁBADO":{"objective":{"drink":86.9478563151796,"app":54.83198146002318,"coffee":38.61066451476901},"real":{"drink":106,"app":61,"coffee":45}},"DOMINGO":{"objective":{"drink":78.3314020857474,"app":23.49942062572422,"coffee":35.25321542652822},"real":{"drink":82,"app":78,"coffee":32}}}},{"am":"JOSE","center":"BLASCO IBAÑEZ","days":{"LUNES":{"objective":{"drink":59.641041537507746,"app":49.33410890820822,"coffee":20.967301478340318},"real":{"drink":27,"app":27,"coffee":13}},"MARTES":{"objective":{"drink":43.54742715437074,"app":16.44470296940274,"coffee":15.725476108755236},"real":{"drink":39,"app":26,"coffee":12}},"MIÉRCOLES":{"objective":{"drink":66.26782393056416,"app":39.05616955233151,"coffee":32.49931729142749},"real":{"drink":31,"app":33,"coffee":27}},"JUEVES":{"objective":{"drink":60.5877247365158,"app":49.33410890820822,"coffee":20.967301478340318},"real":{"drink":52,"app":72,"coffee":45}},"VIERNES":{"objective":{"drink":90.88158710477371,"app":82.22351484701372,"coffee":46.12806325234869},"real":{"drink":36,"app":19,"coffee":39}},"SÁBADO":{"objective":{"drink":89.93490390576565,"app":50.36190284379589,"coffee":66.04699965677199},"real":{"drink":123,"app":35,"coffee":20}},"DOMINGO":{"objective":{"drink":71.00123992560445,"app":51.38969677938356,"coffee":38.78950773492958},"real":{"drink":64,"app":24,"coffee":24}}}},{"am":"TONY","center":"CASINO","days":{"LUNES":{"objective":{"drink":22.06591907859248,"app":28.097693351424695,"coffee":9.006892882325758},"real":{"drink":40,"app":42,"coffee":24}},"MARTES":{"objective":{"drink":58.842450876246616,"app":29.00407055630936,"coffee":15.0114881372096},"real":{"drink":21,"app":10,"coffee":26}},"MIÉRCOLES":{"objective":{"drink":50.56773122177443,"app":10.87652645861601,"coffee":36.02757152930303},"real":{"drink":29,"app":23,"coffee":32}},"JUEVES":{"objective":{"drink":42.29301156730226,"app":22.65943012211669,"coffee":28.02144452279125},"real":{"drink":189,"app":54,"coffee":32}},"VIERNES":{"objective":{"drink":57.92303758130526,"app":58.91451831750339,"coffee":24.018381019535354},"real":{"drink":71,"app":61,"coffee":34}},"SÁBADO":{"objective":{"drink":100.21604914860752,"app":38.06784260515604,"coffee":66.05054780372222},"real":{"drink":71,"app":49,"coffee":60}},"DOMINGO":{"objective":{"drink":55.16479769648121,"app":19.940298507462686,"coffee":37.028337405117014},"real":{"drink":51,"app":39,"coffee":33}}}},{"am":"TONY","center":"CASTELLON","days":{"LUNES":{"objective":{"drink":33.092670262908705,"app":14.735250619766564,"coffee":17.366545373296308},"real":{"drink":18,"app":28,"coffee":17}},"MARTES":{"objective":{"drink":30.084245693553363,"app":21.61170090899096,"coffee":21.452791343483675},"real":{"drink":57,"app":5,"coffee":7}},"MIÉRCOLES":{"objective":{"drink":28.07862931398314,"app":26.523451115579817,"coffee":29.62528328385841},"real":{"drink":28,"app":27,"coffee":21}},"JUEVES":{"objective":{"drink":42.117943970974714,"app":31.43520132216867,"coffee":38.81933671677998},"real":{"drink":20,"app":22,"coffee":17}},"VIERNES":{"objective":{"drink":34.09547845269382,"app":25.54110107426204,"coffee":33.71152925404577},"real":{"drink":38,"app":37,"coffee":35}},"SÁBADO":{"objective":{"drink":58.162875007536506,"app":51.08220214852408,"coffee":31.66840626895209},"real":{"drink":52,"app":25,"coffee":53}},"DOMINGO":{"objective":{"drink":38.10671121183426,"app":47.152801983253006,"coffee":20.43122985093683},"real":{"drink":30,"app":41,"coffee":20}}}},{"am":"AXIER","center":"CONDESA DE VENADITO","days":{"LUNES":{"objective":{"drink":21.719629223374458,"app":16.410629752869724,"coffee":3.670694277661255},"real":{"drink":25,"app":4,"coffee":13}},"MARTES":{"objective":{"drink":20.57649084319685,"app":5.049424539344531,"coffee":11.012082832983763},"real":{"drink":33,"app":24,"coffee":18}},"MIÉRCOLES":{"objective":{"drink":17.147075702664043,"app":8.836492943852928,"coffee":2.447129518440837},"real":{"drink":16,"app":5,"coffee":11}},"JUEVES":{"objective":{"drink":20.57649084319685,"app":16.410629752869724,"coffee":20.80060090674711},"real":{"drink":36,"app":8,"coffee":18}},"VIERNES":{"objective":{"drink":48.01181196745933,"app":13.88591748319746,"coffee":14.68277711064502},"real":{"drink":28,"app":30,"coffee":17}},"SÁBADO":{"objective":{"drink":60.586334149412956,"app":30.296547236067184,"coffee":7.34138855532251},"real":{"drink":37,"app":22,"coffee":13}},"DOMINGO":{"objective":{"drink":21.719629223374458,"app":17.672985887705856,"coffee":14.68277711064502},"real":{"drink":33,"app":28,"coffee":14}}}},{"am":"JOSE","center":"CORTES","days":{"LUNES":{"objective":{"drink":30.848000551326955,"app":38.12035361765091,"coffee":24.73870308017917},"real":{"drink":34,"app":20,"coffee":30}},"MARTES":{"objective":{"drink":38.80877488715327,"app":34.6548669251372,"coffee":39.79704408550562},"real":{"drink":30,"app":25,"coffee":16}},"MIÉRCOLES":{"objective":{"drink":32.83819413528354,"app":20.792920155082317,"coffee":21.51191572189493},"real":{"drink":24,"app":13,"coffee":23}},"JUEVES":{"objective":{"drink":48.75974280693615,"app":27.723893540109756,"coffee":37.64585251331613},"real":{"drink":26,"app":23,"coffee":14}},"VIERNES":{"objective":{"drink":113.44103428552494,"app":26.568731309271847,"coffee":27.96549043846341},"real":{"drink":54,"app":48,"coffee":45}},"SÁBADO":{"objective":{"drink":70.65187223045851,"app":66.99940938859858,"coffee":35.49466094112664},"real":{"drink":49,"app":34,"coffee":41}},"DOMINGO":{"objective":{"drink":44.779355639023,"app":30.034218001785568,"coffee":16.1339367914212},"real":{"drink":37,"app":30,"coffee":17}}}},{"am":"ALEXIS","center":"DENIA","days":{"LUNES":{"objective":{"drink":32.88888888888889,"app":21.925925925925927,"coffee":9.120576131687244},"real":{"drink":36,"app":16,"coffee":5}},"MARTES":{"objective":{"drink":46.59259259259259,"app":34.25925925925926,"coffee":18.241152263374488},"real":{"drink":27,"app":14,"coffee":8}},"MIÉRCOLES":{"objective":{"drink":26.037037037037038,"app":10.962962962962964,"coffee":10.640672153635114},"real":{"drink":11,"app":17,"coffee":8}},"JUEVES":{"objective":{"drink":24.666666666666668,"app":27.407407407407405,"coffee":10.640672153635114},"real":{"drink":9,"app":13,"coffee":12}},"VIERNES":{"objective":{"drink":43.851851851851855,"app":57.55555555555556,"coffee":12.16076817558299},"real":{"drink":33,"app":53,"coffee":16}},"SÁBADO":{"objective":{"drink":116.48148148148148,"app":76.74074074074073,"coffee":27.36172839506173},"real":{"drink":72,"app":77,"coffee":20}},"DOMINGO":{"objective":{"drink":65.77777777777779,"app":38.37037037037037,"coffee":27.36172839506173},"real":{"drink":28,"app":28,"coffee":12}}}},{"am":"ALEXIS","center":"ELCHE","days":{"LUNES":{"objective":{"drink":18.180185758513932,"app":39.17647058823529,"coffee":9.714077581496996},"real":{"drink":93,"app":23,"coffee":7}},"MARTES":{"objective":{"drink":34.22152613367328,"app":38.11764705882353,"coffee":13.356856674558369},"real":{"drink":32,"app":30,"coffee":9}},"MIÉRCOLES":{"objective":{"drink":20.31903114186851,"app":32.8235294117647,"coffee":6.071298488435621},"real":{"drink":15,"app":17,"coffee":22}},"JUEVES":{"objective":{"drink":17.11076306683664,"app":23.294117647058826,"coffee":18.213895465306866},"real":{"drink":21,"app":20,"coffee":13}},"VIERNES":{"objective":{"drink":57.74882535057366,"app":72,"coffee":21.856674558368237},"real":{"drink":58,"app":65,"coffee":15}},"SÁBADO":{"objective":{"drink":113.35880531779274,"app":105.88235294117646,"coffee":21.856674558368237},"real":{"drink":77,"app":68,"coffee":34}},"DOMINGO":{"objective":{"drink":39.568639592059725,"app":47.64705882352941,"coffee":30.35649244217811},"real":{"drink":45,"app":43,"coffee":11}}}},{"am":"ALEXIS","center":"GANDIA","days":{"LUNES":{"objective":{"drink":32.790772459227355,"app":39.19977662331965,"coffee":33.87616486734496},"real":{"drink":23,"app":34,"coffee":19}},"MARTES":{"objective":{"drink":37.64866467540919,"app":31.129234377342076,"coffee":19.357808495625694},"real":{"drink":13,"app":11,"coffee":14}},"MIÉRCOLES":{"objective":{"drink":26.718407189000068,"app":31.129234377342076,"coffee":22.987397588555513},"real":{"drink":18,"app":10,"coffee":20}},"JUEVES":{"objective":{"drink":6.072365270227288,"app":19.599888311659825,"coffee":13.308493340742663},"real":{"drink":15,"app":13,"coffee":7}},"VIERNES":{"objective":{"drink":61.938125756318335,"app":44.964449656160774,"coffee":44.76493214613441},"real":{"drink":68,"app":54,"coffee":43}},"SÁBADO":{"objective":{"drink":68.01049102654564,"app":86.47009549261688,"coffee":50.81424730101744},"real":{"drink":52,"app":53,"coffee":41}},"DOMINGO":{"objective":{"drink":42.50655689159102,"app":39.19977662331965,"coffee":31.456438805391752},"real":{"drink":26,"app":31,"coffee":28}}}},{"am":"ANDREA","center":"GRACIA","days":{"LUNES":{"objective":{"drink":32.705127917162685,"app":23.08318022206749,"coffee":25.043035870712696},"real":{"drink":73,"app":10,"coffee":5}},"MARTES":{"objective":{"drink":18.314871633611105,"app":9.504838914968966,"coffee":13.9127977059515},"real":{"drink":8,"app":17,"coffee":14}},"MIÉRCOLES":{"objective":{"drink":13.082051166865075,"app":13.578341307098523,"coffee":13.9127977059515},"real":{"drink":25,"app":16,"coffee":10}},"JUEVES":{"objective":{"drink":60.177435367579335,"app":42.092858052005425,"coffee":23.651756100117552},"real":{"drink":49,"app":16,"coffee":9}},"VIERNES":{"objective":{"drink":24.85589721704364,"app":17.651843699228078,"coffee":0},"real":{"drink":34,"app":22,"coffee":21}},"SÁBADO":{"objective":{"drink":37.93794838390871,"app":9.504838914968966,"coffee":25.043035870712696},"real":{"drink":25,"app":15,"coffee":8}},"DOMINGO":{"objective":{"drink":17.006666516924593,"app":13.578341307098523,"coffee":12.521517935356348},"real":{"drink":28,"app":18,"coffee":6}}}},{"am":"SERGIO","center":"GRAN VIA","days":{"LUNES":{"objective":{"drink":12.230721898574457,"app":7.634327901420173,"coffee":7.721162178850439},"real":{"drink":19,"app":24,"coffee":12}},"MARTES":{"objective":{"drink":20.384536497624097,"app":13.08741925957744,"coffee":16.545347526108085},"real":{"drink":21,"app":20,"coffee":13}},"MIÉRCOLES":{"objective":{"drink":10.192268248812049,"app":10.906182716314534,"coffee":12.13325485247926},"real":{"drink":30,"app":19,"coffee":17}},"JUEVES":{"objective":{"drink":46.884433944535424,"app":14.178037531208892,"coffee":27.575579210180134},"real":{"drink":34,"app":20,"coffee":12}},"VIERNES":{"objective":{"drink":65.2305167923971,"app":49.07782222341539,"coffee":22.060463368144113},"real":{"drink":67,"app":27,"coffee":38}},"SÁBADO":{"objective":{"drink":77.46123869097156,"app":32.7185481489436,"coffee":34.19371822062337},"real":{"drink":74,"app":24,"coffee":36}},"DOMINGO":{"objective":{"drink":20.384536497624097,"app":37.08102123546941,"coffee":8.824185347257643},"real":{"drink":25,"app":17,"coffee":13}}}},{"am":"JOSE","center":"LA CAÑADA","days":{"LUNES":{"objective":{"drink":25.64158686730506,"app":47.00957592339261,"coffee":17.467454118096196},"real":{"drink":34,"app":23,"coffee":9}},"MARTES":{"objective":{"drink":42.735978112175104,"app":48.07797537619699,"coffee":15.138460235683366},"real":{"drink":21,"app":31,"coffee":9}},"MIÉRCOLES":{"objective":{"drink":32.05198358413133,"app":36.325581395348834,"coffee":9.315975529651304},"real":{"drink":11,"app":9,"coffee":null}},"JUEVES":{"objective":{"drink":25.64158686730506,"app":21.367989056087552,"coffee":19.796448000509017},"real":{"drink":48,"app":59,"coffee":13}},"VIERNES":{"objective":{"drink":39.53077975376197,"app":43.80437756497948,"coffee":25.618932706541084},"real":{"drink":62,"app":60,"coffee":38}},"SÁBADO":{"objective":{"drink":63.03556771545828,"app":88.67715458276334,"coffee":27.94792658895391},"real":{"drink":89,"app":45,"coffee":27}},"DOMINGO":{"objective":{"drink":54.48837209302326,"app":36.325581395348834,"coffee":20.960944941715432},"real":{"drink":57,"app":71,"coffee":34}}}},{"am":"ANDREA","center":"LA MAQUINISTA","days":{"LUNES":{"objective":{"drink":22.99564248229904,"app":44.92780807996668,"coffee":27.78083398583923},"real":{"drink":8,"app":24,"coffee":13}},"MARTES":{"objective":{"drink":22.99564248229904,"app":29.95187205331112,"coffee":30.30636434818825},"real":{"drink":18,"app":17,"coffee":20}},"MIÉRCOLES":{"objective":{"drink":15.330428321532693,"app":18.71992003331945,"coffee":22.72977326114119},"real":{"drink":17,"app":14,"coffee":11}},"JUEVES":{"objective":{"drink":37.04853511037068,"app":41.183824073302794,"coffee":16.41594735526864},"real":{"drink":20,"app":17,"coffee":20}},"VIERNES":{"objective":{"drink":28.10578525614327,"app":16.223930695543526,"coffee":31.569129529362762},"real":{"drink":34,"app":15,"coffee":30}},"SÁBADO":{"objective":{"drink":81.76228438150771,"app":68.63970678883798,"coffee":39.145720616409825},"real":{"drink":67,"app":54,"coffee":46}},"DOMINGO":{"objective":{"drink":30.660856643065387,"app":18.71992003331945,"coffee":11.364886630570595},"real":{"drink":15,"app":11,"coffee":4}}}},{"am":"AXIER","center":"LA MORALEJA","days":{"LUNES":{"objective":{"drink":14.123260437375745,"app":7.061630218687872,"coffee":13.050444845835527},"real":{"drink":12,"app":5,"coffee":10}},"MARTES":{"objective":{"drink":12.946322067594433,"app":7.061630218687872,"coffee":7.830266907501314},"real":{"drink":19,"app":17,"coffee":15}},"MIÉRCOLES":{"objective":{"drink":27.069582504970178,"app":25.892644135188867,"coffee":18.270622784169735},"real":{"drink":47,"app":32,"coffee":12}},"JUEVES":{"objective":{"drink":30.600397614314115,"app":12.946322067594433,"coffee":5.22017793833421},"real":{"drink":75,"app":24,"coffee":8}},"VIERNES":{"objective":{"drink":45.90059642147118,"app":24.715705765407552,"coffee":20.88071175333684},"real":{"drink":25,"app":19,"coffee":8}},"SÁBADO":{"objective":{"drink":70.61630218687873,"app":37.662027833001986,"coffee":19.575667268753286},"real":{"drink":91,"app":67,"coffee":16}},"DOMINGO":{"objective":{"drink":47.07753479125249,"app":32.95427435387674,"coffee":7.830266907501314},"real":{"drink":57,"app":51,"coffee":9}}}},{"am":"AXIER","center":"LAS ROZAS","days":{"LUNES":{"objective":{"drink":6.994120515191044,"app":7.574999050164005,"coffee":10.105357391623714},"real":{"drink":16,"app":10,"coffee":5}},"MARTES":{"objective":{"drink":6.994120515191044,"app":3.0299996200656016,"coffee":7.218112422588368},"real":{"drink":4,"app":3,"coffee":2}},"MIÉRCOLES":{"objective":{"drink":2.7976482060764174,"app":0,"coffee":2.8872449690353466},"real":{"drink":6,"app":5,"coffee":6}},"JUEVES":{"objective":{"drink":15.387065133420295,"app":7.574999050164005,"coffee":4.3308674535530205},"real":{"drink":6,"app":4,"coffee":4}},"VIERNES":{"objective":{"drink":9.791768721267461,"app":9.089998860196806,"coffee":4.3308674535530205},"real":{"drink":59,"app":36,"coffee":7}},"SÁBADO":{"objective":{"drink":54.55414001849014,"app":49.99499373108243,"coffee":12.992602360659061},"real":{"drink":25,"app":18,"coffee":6}},"DOMINGO":{"objective":{"drink":12.589416927343878,"app":1.5149998100328008,"coffee":0},"real":{"drink":0,"app":1,"coffee":7}}}},{"am":"AXIER","center":"LAS TABLAS","days":{"LUNES":{"objective":{"drink":23.959033241983377,"app":22.643505787195686,"coffee":19.401620138671806},"real":{"drink":18,"app":7,"coffee":8}},"MARTES":{"objective":{"drink":17.70885065711815,"app":8.234002104434795,"coffee":14.012281211262968},"real":{"drink":19,"app":13,"coffee":10}},"MIÉRCOLES":{"objective":{"drink":19.792244852073225,"app":8.234002104434795,"coffee":7.545074498372367},"real":{"drink":135,"app":66,"coffee":6}},"JUEVES":{"objective":{"drink":36.459398411713835,"app":30.877507891630483,"coffee":9.700810069335903},"real":{"drink":19,"app":12,"coffee":24}},"VIERNES":{"objective":{"drink":55.209946166309514,"app":24.702006313304388,"coffee":18.323752353190038},"real":{"drink":58,"app":22,"coffee":21}},"SÁBADO":{"objective":{"drink":31.250912924326144,"app":24.702006313304388,"coffee":30.180297993489468},"real":{"drink":56,"app":26,"coffee":8}},"DOMINGO":{"objective":{"drink":19.792244852073225,"app":23.672756050250037,"coffee":16.168016782226502},"real":{"drink":35,"app":41,"coffee":14}}}},{"am":"TONY","center":"LES GAVARRES","days":{"LUNES":{"objective":{"drink":27.93931572512566,"app":18.002864406450737,"coffee":32.48385375225601},"real":{"drink":21,"app":43,"coffee":24}},"MARTES":{"objective":{"drink":13.410871548060316,"app":31.769760717266006,"coffee":37.723185002619886},"real":{"drink":13,"app":18,"coffee":36}},"MIÉRCOLES":{"objective":{"drink":55.87863145025132,"app":18.002864406450737,"coffee":26.196656251819366},"real":{"drink":24,"app":20,"coffee":34}},"JUEVES":{"objective":{"drink":23.469025209105553,"app":39.18270488462808,"coffee":33.53172000232878},"real":{"drink":60,"app":7,"coffee":28}},"VIERNES":{"objective":{"drink":44.702905160201055,"app":59.30355333889655,"coffee":44.01038250305653},"real":{"drink":30,"app":29,"coffee":49}},"SÁBADO":{"objective":{"drink":63.70163985328649,"app":49.77262512371675,"coffee":49.2497137534204},"real":{"drink":38,"app":44,"coffee":39}},"DOMINGO":{"objective":{"drink":44.702905160201055,"app":36.005728812901474,"coffee":54.48904500378428},"real":{"drink":44,"app":35,"coffee":45}}}},{"am":"AXIER","center":"MADRID PLAZA ESPAÑA","days":{"LUNES":{"objective":{"drink":63.90236165545717,"app":51.90660594183965,"coffee":17.398292971081112},"real":{"drink":52,"app":36,"coffee":17}},"MARTES":{"objective":{"drink":83.22168029547909,"app":64.4900255641038,"coffee":6.3266519894840405},"real":{"drink":49,"app":16,"coffee":13}},"MIÉRCOLES":{"objective":{"drink":69.84676739084853,"app":45.61489613070758,"coffee":17.398292971081112},"real":{"drink":51,"app":23,"coffee":14}},"JUEVES":{"objective":{"drink":37.15253584619603,"app":23.593911791745295,"coffee":34.796585942162224},"real":{"drink":85,"app":37,"coffee":20}},"VIERNES":{"objective":{"drink":1.4861014338478409,"app":64.4900255641038,"coffee":3.1633259947420203},"real":{"drink":41,"app":26,"coffee":28}},"SÁBADO":{"objective":{"drink":105.51320180319671,"app":42.46904122514153,"coffee":80.6648128659215},"real":{"drink":88,"app":61,"coffee":28}},"DOMINGO":{"objective":{"drink":47.55524588313091,"app":40.896113772358504,"coffee":53.77654191061435},"real":{"drink":42,"app":40,"coffee":21}}}},{"am":"JOSE","center":"MARTINEZ CUBELLS","days":{"LUNES":{"objective":{"drink":29.012623050354843,"app":89.70880388585307,"coffee":15.849073714641515},"real":{"drink":31,"app":39,"coffee":12}},"MARTES":{"objective":{"drink":32.2362478337276,"app":55.40837887067396,"coffee":30.64154251497359},"real":{"drink":23,"app":23,"coffee":38}},"MIÉRCOLES":{"objective":{"drink":23.639915078066913,"app":65.96235579842137,"coffee":33.811357257901896},"real":{"drink":23,"app":34,"coffee":28}},"JUEVES":{"objective":{"drink":39.758038994930715,"app":65.96235579842137,"coffee":15.849073714641515},"real":{"drink":30,"app":31,"coffee":24}},"VIERNES":{"objective":{"drink":47.279830156133826,"app":67.28160291438981,"coffee":38.03777691513964},"real":{"drink":41,"app":54,"coffee":29}},"SÁBADO":{"objective":{"drink":141.83949046840146,"app":109.49751062537949,"coffee":13.735863886022646},"real":{"drink":56,"app":87,"coffee":47}},"DOMINGO":{"objective":{"drink":74.1433700175735,"app":34.30042501517911,"coffee":12.679258971713212},"real":{"drink":42,"app":26,"coffee":21}}}},{"am":"NACHO","center":"NH ZURBANO","days":{"LUNES":{"objective":{"drink":49.146191646191646,"app":13.105651105651106,"coffee":11.054874312552444},"real":{"drink":75,"app":8,"coffee":23}},"MARTES":{"objective":{"drink":84.0945945945946,"app":32.764127764127764,"coffee":22.10974862510489},"real":{"drink":84,"app":9,"coffee":15}},"MIÉRCOLES":{"objective":{"drink":63.34398034398035,"app":25.11916461916462,"coffee":17.19647115285936},"real":{"drink":86,"app":8,"coffee":15}},"JUEVES":{"objective":{"drink":115.76658476658476,"app":18.566339066339065,"coffee":15.968151784797977},"real":{"drink":56,"app":25,"coffee":11}},"VIERNES":{"objective":{"drink":127.78009828009827,"app":18.566339066339065,"coffee":28.251345465411806},"real":{"drink":54,"app":39,"coffee":15}},"SÁBADO":{"objective":{"drink":79.72604422604424,"app":25.11916461916462,"coffee":25.794706729289036},"real":{"drink":66,"app":32,"coffee":27}},"DOMINGO":{"objective":{"drink":30.57985257985258,"app":15.28992628992629,"coffee":14.739832416736592},"real":{"drink":58,"app":28,"coffee":10}}}},{"am":"AXIER","center":"ORTEGA Y GASSET","days":{"LUNES":{"objective":{"drink":29.408,"app":19.875006693877552,"coffee":4.73768881632653},"real":{"drink":19,"app":4,"coffee":6}},"MARTES":{"objective":{"drink":29.408,"app":5.845590204081633,"coffee":22.50402187755102},"real":{"drink":30,"app":28,"coffee":20}},"MIÉRCOLES":{"objective":{"drink":32.55885714285714,"app":7.014708244897959,"coffee":10.659799836734694},"real":{"drink":21,"app":24,"coffee":11}},"JUEVES":{"objective":{"drink":25.206857142857142,"app":21.044124734693877,"coffee":28.42613289795918},"real":{"drink":42,"app":19,"coffee":7}},"VIERNES":{"objective":{"drink":84.02285714285715,"app":53.779429877551024,"coffee":21.319599673469387},"real":{"drink":36,"app":23,"coffee":7}},"SÁBADO":{"objective":{"drink":74.57028571428572,"app":33.904423183673465,"coffee":79.35628767346937},"real":{"drink":67,"app":44,"coffee":19}},"DOMINGO":{"objective":{"drink":39.91085714285714,"app":5.845590204081633,"coffee":41.45477714285714},"real":{"drink":60,"app":23,"coffee":15}}}},{"am":"AXIER","center":"PLAZA DE LOS SITIOS ZARAGOZA","days":{"LUNES":{"objective":{"drink":39.92549545894323,"app":25.041915046346872,"coffee":9.718423270185076},"real":{"drink":2,"app":2,"coffee":8}},"MARTES":{"objective":{"drink":20.913354764208357,"app":26.08532817327799,"coffee":11.662107924222092},"real":{"drink":21,"app":9,"coffee":10}},"MIÉRCOLES":{"objective":{"drink":17.110926625261385,"app":29.215567554071352,"coffee":19.43684654037015},"real":{"drink":15,"app":23,"coffee":15}},"JUEVES":{"objective":{"drink":24.715782903155333,"app":13.564370650104555,"coffee":16.52131955931463},"real":{"drink":26,"app":14,"coffee":30}},"VIERNES":{"objective":{"drink":38.02428138946974,"app":23.99850191941575,"coffee":30.127112137573732},"real":{"drink":42,"app":43,"coffee":35}},"SÁBADO":{"objective":{"drink":51.332779875784155,"app":44.86676445803814,"coffee":33.04263911862926},"real":{"drink":50,"app":67,"coffee":51}},"DOMINGO":{"objective":{"drink":17.110926625261385,"app":21.911675665553513,"coffee":15.54947723229612},"real":{"drink":22,"app":11,"coffee":27}}}},{"am":"AXIER","center":"PUERTO VENECIA","days":{"LUNES":{"objective":{"drink":32.9547986341407,"app":34.50341261633919,"coffee":16.72143106164226},"real":{"drink":17,"app":9,"coffee":10}},"MARTES":{"objective":{"drink":17.04558550041761,"app":35.94105480868666,"coffee":20.065717273970712},"real":{"drink":13,"app":13,"coffee":11}},"MIÉRCOLES":{"objective":{"drink":14.772840767028594,"app":17.251706308169595,"coffee":31.21333798173222},"real":{"drink":16,"app":23,"coffee":10}},"JUEVES":{"objective":{"drink":34.09117100083522,"app":43.12926577042399,"coffee":36.787148335612976},"real":{"drink":17,"app":13,"coffee":17}},"VIERNES":{"objective":{"drink":31.818426267446203,"app":43.12926577042399,"coffee":16.72143106164226},"real":{"drink":9,"app":11,"coffee":19}},"SÁBADO":{"objective":{"drink":334.09347580818513,"app":109.26080661840743,"coffee":17.836193132418412},"real":{"drink":68,"app":49,"coffee":44}},"DOMINGO":{"objective":{"drink":15.909213133723101,"app":12.938779731127196,"coffee":1.1147620707761507},"real":{"drink":9,"app":13,"coffee":19}}}},{"am":"TONY","center":"REUS","days":{"LUNES":{"objective":{"drink":19.08342344275525,"app":17.38071829415634,"coffee":21.24792355704416},"real":{"drink":7,"app":17,"coffee":12}},"MARTES":{"objective":{"drink":10.73442568654983,"app":19.55330808092588,"coffee":23.484547089364604},"real":{"drink":10,"app":3,"coffee":18}},"MIÉRCOLES":{"objective":{"drink":15.505281547238642,"app":21.72589786769542,"coffee":27.957794154005477},"real":{"drink":30,"app":24,"coffee":19}},"JUEVES":{"objective":{"drink":22.66156533827186,"app":27.15737233461928,"coffee":32.43104121864635},"real":{"drink":12,"app":8,"coffee":41}},"VIERNES":{"objective":{"drink":62.02112618895457,"app":57.57362934939287,"coffee":42.49584711408832},"real":{"drink":40,"app":43,"coffee":33}},"SÁBADO":{"objective":{"drink":13.119853616894236,"app":16.29442340077157,"coffee":7.828182363121534},"real":{"drink":42,"app":27,"coffee":46}},"DOMINGO":{"objective":{"drink":21.46885137309966,"app":16.29442340077157,"coffee":12.301429427762411},"real":{"drink":30,"app":20,"coffee":22}}}},{"am":"ANDREA","center":"SABADELL","days":{"LUNES":{"objective":{"drink":12.937755352831472,"app":14.916031748326562,"coffee":12.694418742500254},"real":{"drink":16,"app":22,"coffee":6}},"MARTES":{"objective":{"drink":11.500226980294642,"app":14.916031748326562,"coffee":16.925891656667005},"real":{"drink":4,"app":6,"coffee":7}},"MIÉRCOLES":{"objective":{"drink":4.312585117610491,"app":2.9832063496653127,"coffee":8.462945828333503},"real":{"drink":6,"app":7,"coffee":8}},"JUEVES":{"objective":{"drink":11.500226980294642,"app":8.949619048995938,"coffee":9.873436799722418},"real":{"drink":8,"app":4,"coffee":4}},"VIERNES":{"objective":{"drink":37.37573768595759,"app":28.34046032182047,"coffee":22.567855542222674},"real":{"drink":10,"app":16,"coffee":17}},"SÁBADO":{"objective":{"drink":112.12721305787274,"app":26.848857146987815,"coffee":62.061602741112345},"real":{"drink":49,"app":19,"coffee":19}},"DOMINGO":{"objective":{"drink":79.06406048952566,"app":17.899238097991876,"coffee":55.00914788416776},"real":{"drink":16,"app":21,"coffee":22}}}},{"am":"TONY","center":"SAGUNTO","days":{"LUNES":{"objective":{"drink":26.86326633740775,"app":22.655021834061134,"coffee":24.509963578116356},"real":{"drink":23,"app":35,"coffee":20}},"MARTES":{"objective":{"drink":56.71134004563858,"app":48.14192139737992,"coffee":36.76494536717453},"real":{"drink":29,"app":21,"coffee":23}},"MIÉRCOLES":{"objective":{"drink":39.79743161097444,"app":41.53420669577875,"coffee":20.424969648430295},"real":{"drink":16,"app":24,"coffee":24}},"JUEVES":{"objective":{"drink":25.86833054713339,"app":44.36608442503639,"coffee":27.573709025380904},"real":{"drink":11,"app":49,"coffee":20}},"VIERNES":{"objective":{"drink":54.72146846508986,"app":39.646288209606986,"coffee":41.87118777928211},"real":{"drink":48,"app":45,"coffee":34}},"SÁBADO":{"objective":{"drink":62.680954787284755,"app":53.80567685589519,"coffee":34.7224484023315},"real":{"drink":107,"app":69,"coffee":43}},"DOMINGO":{"objective":{"drink":32.83288107905392,"app":30.20669577874818,"coffee":12.254981789058178},"real":{"drink":42,"app":49,"coffee":34}}}},{"am":"AXIER","center":"SAN BERNARDO","days":{"LUNES":{"objective":{"drink":39.084926698928626,"app":20.10611575487811,"coffee":10.518140074271516},"real":{"drink":21,"app":19,"coffee":5}},"MARTES":{"objective":{"drink":42.17057880673878,"app":21.223122185704675,"coffee":11.686822304746128},"real":{"drink":41,"app":20,"coffee":20}},"MIÉRCOLES":{"objective":{"drink":64.79869426401325,"app":35.744205786449974,"coffee":25.71100907044148},"real":{"drink":130,"app":8,"coffee":12}},"JUEVES":{"objective":{"drink":17.485361944257544,"app":12.287070739092178,"coffee":17.530233457119195},"real":{"drink":68,"app":40,"coffee":14}},"VIERNES":{"objective":{"drink":74.05565058744371,"app":35.744205786449974,"coffee":19.867597918068423},"real":{"drink":80,"app":25,"coffee":14}},"SÁBADO":{"objective":{"drink":51.42753513016925,"app":49.14828295636871,"coffee":17.530233457119195},"real":{"drink":131,"app":51,"coffee":28}},"DOMINGO":{"objective":{"drink":41.14202810413539,"app":23.4571350473578,"coffee":17.530233457119195},"real":{"drink":40,"app":24,"coffee":16}}}},{"am":"NACHO","center":"TAGOMAGO NH LAGASCA","days":{"LUNES":{"objective":{"drink":52.96153846153846,"app":15.576923076923078,"coffee":10.919822485207101},"real":{"drink":42,"app":24,"coffee":13}},"MARTES":{"objective":{"drink":70.61538461538461,"app":8.307692307692308,"coffee":20.74766272189349},"real":{"drink":50,"app":11,"coffee":11}},"MIÉRCOLES":{"objective":{"drink":48.80769230769231,"app":15.576923076923078,"coffee":17.471715976331364},"real":{"drink":49,"app":9,"coffee":20}},"JUEVES":{"objective":{"drink":75.8076923076923,"app":28.038461538461537,"coffee":31.66748520710059},"real":{"drink":75,"app":31,"coffee":13}},"VIERNES":{"objective":{"drink":71.65384615384616,"app":38.42307692307692,"coffee":27.299556213017752},"real":{"drink":52,"app":25,"coffee":18}},"SÁBADO":{"objective":{"drink":75.8076923076923,"app":19.73076923076923,"coffee":60.05902366863906},"real":{"drink":72,"app":16,"coffee":22}},"DOMINGO":{"objective":{"drink":33.23076923076923,"app":11.423076923076923,"coffee":24.02360946745562},"real":{"drink":34,"app":11,"coffee":2}}}},{"am":"JOSE","center":"TAGOMAGO VLC","days":{"LUNES":{"objective":{"drink":55.029906542056075,"app":24.20165254607389,"coffee":35.65524761987947},"real":{"drink":46,"app":30,"coffee":41}},"MARTES":{"objective":{"drink":29.84672897196262,"app":30.802103240457683,"coffee":17.34579613940082},"real":{"drink":48,"app":17,"coffee":46}},"MIÉRCOLES":{"objective":{"drink":19.586915887850466,"app":12.100826273036946,"coffee":18.309451480478646},"real":{"drink":15,"app":20,"coffee":31}},"JUEVES":{"objective":{"drink":47.56822429906542,"app":30.802103240457683,"coffee":41.43717966634642},"real":{"drink":28,"app":15,"coffee":37}},"VIERNES":{"objective":{"drink":96.06915887850468,"app":34.10232858764957,"coffee":36.61890296095729},"real":{"drink":62,"app":27,"coffee":23}},"SÁBADO":{"objective":{"drink":56.89532710280373,"app":39.60270416630273,"coffee":38.546213643112935},"real":{"drink":120,"app":46,"coffee":82}},"DOMINGO":{"objective":{"drink":35.44299065420561,"app":17.601201851690103,"coffee":34.69159227880164},"real":{"drink":65,"app":12,"coffee":19}}}},{"am":"TONY","center":"TARRAGONA RAMBLA","days":{"LUNES":{"objective":{"drink":25.03752458905879,"app":23.832037697290033,"coffee":22.96187285117948},"real":{"drink":22,"app":27,"coffee":20}},"MARTES":{"objective":{"drink":52.252225229340084,"app":23.832037697290033,"coffee":19.68160530101098},"real":{"drink":25,"app":15,"coffee":13}},"MIÉRCOLES":{"objective":{"drink":13.063056307335021,"app":9.749469967073194,"coffee":14.21449271739682},"real":{"drink":17,"app":26,"coffee":19}},"JUEVES":{"objective":{"drink":27.21470064028129,"app":24.915312138075947,"coffee":24.05529536790231},"real":{"drink":24,"app":13,"coffee":37}},"VIERNES":{"objective":{"drink":40.277756947616304,"app":40.08115430907869,"coffee":33.8960980184078},"real":{"drink":59,"app":54,"coffee":50}},"SÁBADO":{"objective":{"drink":34.834816819560054,"app":43.330977631436426,"coffee":3.280267550168497},"real":{"drink":100,"app":51,"coffee":68}},"DOMINGO":{"objective":{"drink":19.594584461002526,"app":17.33239105257457,"coffee":16.401337750842483},"real":{"drink":78,"app":23,"coffee":48}}}},{"am":"AXIER","center":"TEIXEIRA","days":{"LUNES":{"objective":{"drink":14.360310426688756,"app":2.9108861675983877,"coffee":4.15610880598158},"real":{"drink":11,"app":6,"coffee":6}},"MARTES":{"objective":{"drink":11.749344894563528,"app":10.188101586594358,"coffee":2.7707392039877194},"real":{"drink":7,"app":6,"coffee":2}},"MIÉRCOLES":{"objective":{"drink":33.942551917627966,"app":20.376203173188717,"coffee":16.62443522392632},"real":{"drink":46,"app":16,"coffee":6}},"JUEVES":{"objective":{"drink":9.1383793624383,"app":21.83164625698791,"coffee":1.3853696019938597},"real":{"drink":29,"app":8,"coffee":4}},"VIERNES":{"objective":{"drink":40.469965747941046,"app":32.019747843582266,"coffee":11.082956815950878},"real":{"drink":53,"app":17,"coffee":11}},"SÁBADO":{"objective":{"drink":56.13575894069242,"app":18.920760089389518,"coffee":44.33182726380351},"real":{"drink":37,"app":61,"coffee":7}},"DOMINGO":{"objective":{"drink":31.331586385502746,"app":13.098987754192745,"coffee":29.092761641871054},"real":{"drink":9,"app":9,"coffee":6}}}},{"am":"ANDREA","center":"TERRASSA","days":{"LUNES":{"objective":{"drink":37.13663944615912,"app":20.321236282578877,"coffee":40.8369341563786},"real":{"drink":21,"app":34,"coffee":23}},"MARTES":{"objective":{"drink":30.733770576131686,"app":29.211777156207138,"coffee":21.694621270576132},"real":{"drink":11,"app":5,"coffee":11}},"MIÉRCOLES":{"objective":{"drink":5.122295096021948,"app":10.160618141289438,"coffee":11.48538773148148},"real":{"drink":9,"app":11,"coffee":21}},"JUEVES":{"objective":{"drink":12.80573774005487,"app":39.372395297496574,"coffee":12.761541923868313},"real":{"drink":5,"app":6,"coffee":29}},"VIERNES":{"objective":{"drink":79.39557398834019,"app":48.26293617112484,"coffee":44.6653967335391},"real":{"drink":27,"app":35,"coffee":17}},"SÁBADO":{"objective":{"drink":93.48188550240056,"app":48.26293617112484,"coffee":59.979247042181065},"real":{"drink":51,"app":34,"coffee":45}},"DOMINGO":{"objective":{"drink":74.27327889231825,"app":6.350386338305899,"coffee":34.45616319444444},"real":{"drink":73,"app":24,"coffee":35}}}},{"am":"ALEXIS","center":"TORRENT","days":{"LUNES":{"objective":{"drink":36.1208967173739,"app":48.87802238588309,"coffee":48.60704336086964},"real":{"drink":31,"app":27,"coffee":30}},"MARTES":{"objective":{"drink":83.59407526020816,"app":42.638274847259716,"coffee":34.56500861217397},"real":{"drink":49,"app":30,"coffee":28}},"MIÉRCOLES":{"objective":{"drink":33.02481985588471,"app":25.998948077597387,"coffee":21.603130382608725},"real":{"drink":31,"app":13,"coffee":20}},"JUEVES":{"objective":{"drink":26.832666132906326,"app":50.95793823209088,"coffee":33.484852093043536},"real":{"drink":31,"app":30,"coffee":20}},"VIERNES":{"objective":{"drink":93.91433146517213,"app":71.75709669416878,"coffee":56.168138994782694},"real":{"drink":64,"app":63,"coffee":33}},"SÁBADO":{"objective":{"drink":69.14571657325861,"app":72.79705461727269,"coffee":28.084069497391347},"real":{"drink":90,"app":95,"coffee":33}},"DOMINGO":{"objective":{"drink":18.57646116893515,"app":34.31861146242855,"coffee":21.603130382608725},"real":{"drink":51,"app":84,"coffee":28}}}},{"am":"JOSE","center":"TURQUETA","days":{"LUNES":{"objective":{"drink":21.843182993254537,"app":4.892599915144914,"coffee":18.53832821740766},"real":{"drink":12,"app":6,"coffee":13}},"MARTES":{"objective":{"drink":7.597628867218969,"app":1.9570399660579658,"coffee":10.299071231893144},"real":{"drink":28,"app":18,"coffee":13}},"MIÉRCOLES":{"objective":{"drink":24.692293818461653,"app":13.699279762405762,"coffee":17.508421094218345},"real":{"drink":22,"app":14,"coffee":8}},"JUEVES":{"objective":{"drink":52.233698462130405,"app":13.699279762405762,"coffee":22.657956710164918},"real":{"drink":7,"app":3,"coffee":8}},"VIERNES":{"objective":{"drink":25.64199742686402,"app":15.656319728463727,"coffee":8.239256985514515},"real":{"drink":13,"app":15,"coffee":9}},"SÁBADO":{"objective":{"drink":207.0353866317169,"app":33.26967942298542,"coffee":50.46544903627641},"real":{"drink":77,"app":27,"coffee":22}},"DOMINGO":{"objective":{"drink":140.55613404355094,"app":31.312639456927453,"coffee":33.98693506524738},"real":{"drink":12,"app":14,"coffee":12}}}},{"am":"TONY","center":"VIRGEN","days":{"LUNES":{"objective":{"drink":164.41551540913923,"app":51.025504782146655,"coffee":14.76721126709664},"real":{"drink":126,"app":60,"coffee":24}},"MARTES":{"objective":{"drink":111.12221041445271,"app":64.63230605738576,"coffee":12.306009389247201},"real":{"drink":87,"app":61,"coffee":4}},"MIÉRCOLES":{"objective":{"drink":72.56960680127523,"app":55.561105207226355,"coffee":12.306009389247201},"real":{"drink":91,"app":43,"coffee":32}},"JUEVES":{"objective":{"drink":155.34431455897982,"app":108.85441020191286,"coffee":41.840431923440484},"real":{"drink":97,"app":28,"coffee":29}},"VIERNES":{"objective":{"drink":141.7375132837407,"app":100.91710945802338,"coffee":8.61420657247304},"real":{"drink":218,"app":122,"coffee":46}},"SÁBADO":{"objective":{"drink":61.23060573857598,"app":164.41551540913923,"coffee":18.459014083870798},"real":{"drink":308,"app":268,"coffee":57}},"DOMINGO":{"objective":{"drink":19.276301806588737,"app":72.56960680127523,"coffee":9.84480751139776},"real":{"drink":184,"app":137,"coffee":33}}}},{"am":"ALEXIS","center":"VISTA HERMOSA","days":{"LUNES":{"objective":{"drink":21.157863109188146,"app":17.40010816657653,"coffee":21.614626524848262},"real":{"drink":13,"app":19,"coffee":11}},"MARTES":{"objective":{"drink":37.02626044107926,"app":21.750135208220655,"coffee":18.20179075776696},"real":{"drink":19,"app":16,"coffee":8}},"MIÉRCOLES":{"objective":{"drink":15.868397331891112,"app":28.275175770686857,"coffee":20.47701460248783},"real":{"drink":14,"app":16,"coffee":19}},"JUEVES":{"objective":{"drink":28.563115197404,"app":16.312601406165495,"coffee":12.513731145964785},"real":{"drink":15,"app":29,"coffee":7}},"VIERNES":{"objective":{"drink":40.19993990745748,"app":16.312601406165495,"coffee":22.752238447208697},"real":{"drink":54,"app":42,"coffee":18}},"SÁBADO":{"objective":{"drink":69.82094826032088,"app":48.93780421849648,"coffee":42.09164112733609},"real":{"drink":88,"app":35,"coffee":14}},"DOMINGO":{"objective":{"drink":41.25783306291689,"app":11.962574364521362,"coffee":27.30268613665044},"real":{"drink":53,"app":55,"coffee":19}}}},{"am":"SERGIO","center":"VIVEROS","days":{"LUNES":{"objective":{"drink":53.28067078552515,"app":35.6987326369549,"coffee":32.0288266862145},"real":{"drink":39,"app":17,"coffee":33}},"MARTES":{"objective":{"drink":54.28596646072374,"app":29.208053975690376,"coffee":20.28492356793585},"real":{"drink":46,"app":15,"coffee":18}},"MIÉRCOLES":{"objective":{"drink":64.33892321270962,"app":17.30847643003874,"coffee":41.63747469207885},"real":{"drink":51,"app":34,"coffee":23}},"JUEVES":{"objective":{"drink":58.3071491615181,"app":30.289833752567798,"coffee":30.96119913000735},"real":{"drink":42,"app":36,"coffee":34}},"VIERNES":{"objective":{"drink":56.29655781112092,"app":37.862292190709745,"coffee":37.36696446725025},"real":{"drink":52,"app":30,"coffee":45}},"SÁBADO":{"objective":{"drink":38.201235657546334,"app":51.92542929011623,"coffee":23.487806236557297},"real":{"drink":46,"app":32,"coffee":56}},"DOMINGO":{"objective":{"drink":15.079435127978819,"app":33.535173083200064,"coffee":20.28492356793585},"real":{"drink":54,"app":34,"coffee":32}}}},{"am":"AXIER","center":"ZARAGOZA ACTUR","days":{"LUNES":{"objective":{"drink":11.980493147255773,"app":22.5898168978363,"coffee":6.561346141811127},"real":{"drink":7,"app":11,"coffee":11}},"MARTES":{"objective":{"drink":18.63632267350898,"app":12.047902345512696,"coffee":10.498153826897802},"real":{"drink":23,"app":17,"coffee":15}},"MIÉRCOLES":{"objective":{"drink":10.649327242005132,"app":4.51796337956726,"coffee":11.810423055260026},"real":{"drink":11,"app":10,"coffee":9}},"JUEVES":{"objective":{"drink":11.980493147255773,"app":10.54191455232361,"coffee":13.122692283622253},"real":{"drink":4,"app":5,"coffee":17}},"VIERNES":{"objective":{"drink":27.95448401026347,"app":9.03592675913452,"coffee":28.869923023968955},"real":{"drink":34,"app":8,"coffee":37}},"SÁBADO":{"objective":{"drink":106.49327242005133,"app":34.637719243349,"coffee":22.308576882157833},"real":{"drink":42,"app":18,"coffee":42}},"DOMINGO":{"objective":{"drink":47.92197258902309,"app":7.529938965945435,"coffee":13.122692283622253},"real":{"drink":18,"app":11,"coffee":28}}}},{"am":"AXIER","center":"ZIELO POZUELO","days":{"LUNES":{"objective":{"drink":39.05862831858407,"app":9.645072783694886,"coffee":17.66168063278252},"real":{"drink":39,"app":9,"coffee":13}},"MARTES":{"objective":{"drink":56.698008849557525,"app":26.179483270028975,"coffee":13.24626047458689},"real":{"drink":28,"app":9,"coffee":11}},"MIÉRCOLES":{"objective":{"drink":30.238938053097346,"app":12.400807864750567,"coffee":14.718067193985434},"real":{"drink":14,"app":18,"coffee":13}},"JUEVES":{"objective":{"drink":45.358407079646014,"app":15.15654294580625,"coffee":16.189873913383977},"real":{"drink":47,"app":10,"coffee":9}},"VIERNES":{"objective":{"drink":40.31858407079646,"app":26.179483270028975,"coffee":7.359033596992717},"real":{"drink":77,"app":9,"coffee":14}},"SÁBADO":{"objective":{"drink":20.15929203539823,"app":100.58433045853238,"coffee":7.359033596992717},"real":{"drink":70,"app":40,"coffee":25}},"DOMINGO":{"objective":{"drink":13.859513274336283,"app":26.179483270028975,"coffee":8.83084031639126},"real":{"drink":31,"app":10,"coffee":11}}}},{"am":"AXIER","center":"ZURBARAN","days":{"LUNES":{"objective":{"drink":18.468376752163962,"app":16.73459174291752,"coffee":5.089312454317553},"real":{"drink":10,"app":3,"coffee":6}},"MARTES":{"objective":{"drink":12.312251168109308,"app":25.101887614376277,"coffee":12.723281135793885},"real":{"drink":28,"app":19,"coffee":12}},"MIÉRCOLES":{"objective":{"drink":14.77470140173117,"app":9.761845183368553,"coffee":6.361640567896942},"real":{"drink":11,"app":7,"coffee":8}},"JUEVES":{"objective":{"drink":25.855727453029544,"app":8.36729587145876,"coffee":3.816984340738166},"real":{"drink":27,"app":26,"coffee":21}},"VIERNES":{"objective":{"drink":25.855727453029544,"app":15.340042431007724,"coffee":15.267937362952663},"real":{"drink":17,"app":30,"coffee":4}},"SÁBADO":{"objective":{"drink":25.855727453029544,"app":8.36729587145876,"coffee":15.267937362952663},"real":{"drink":35,"app":12,"coffee":11}},"DOMINGO":{"objective":{"drink":13.543476284920237,"app":16.73459174291752,"coffee":7.633968681476332},"real":{"drink":7,"app":null,"coffee":3}}}},{"am":"","center":"TOTAL","days":{"LUNES":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}}}}]},"OBJ VS REAL 21 AL 27":{"label":"21 AL 27","centers":[{"am":"JOSE","center":"ALAMEDA","days":{"LUNES":{"objective":{"drink":42.405362776025235,"app":56.19115400690624,"coffee":20.22756222074058},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":50.21687697160883,"app":30.77134624187722,"coffee":32.12612823294092},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":35.709779179810724,"app":32.10923086108927,"coffee":24.986988625620718},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":41.28943217665615,"app":60.20480786454239,"coffee":35.695698036601016},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":80.34700315457414,"app":56.19115400690624,"coffee":34.50584143538099},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":56.912460567823345,"app":69.57000019902677,"coffee":58.302973459781676},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":51.33280757097792,"app":52.177500149270074,"coffee":55.923260257341596},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"JOSE","center":"ALBACETE","days":{"LUNES":{"objective":{"drink":54.901671583087506,"app":14.19943845482259,"coffee":29.373910000009673},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":123.31760078662734,"app":25.558989218680658,"coffee":47.732603750015706},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":28.71779744346116,"app":56.79775381929036,"coffee":32.12771406251058},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":108.1140609636185,"app":40.705056903824754,"coffee":25.702171250008462},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":74.32841691248771,"app":56.79775381929036,"coffee":35.79945281251178},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":92.91052114060963,"app":88.98314765022157,"coffee":104.64455437503445},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":28.71779744346116,"app":49.224719976718305,"coffee":32.12771406251058},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ALEXIS","center":"ALICANTE","days":{"LUNES":{"objective":{"drink":37.04356851710236,"app":35.64008394647422,"coffee":21.36254899146264},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":23.66672433037095,"app":19.54456216419554,"coffee":14.616480888895486},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":41.15952057455818,"app":21.843922418806784,"coffee":24.73558304274621},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":21.608748301643043,"app":29.891683309946117,"coffee":15.74082557265668},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":55.56535277565354,"app":62.08272687450348,"coffee":32.60599582907455},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":104.95677746512334,"app":104.62089158481142,"coffee":22.48689367522383},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":30.869640430918633,"app":59.783366619892234,"coffee":22.48689367522383},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ALEXIS","center":"ALMERIA","days":{"LUNES":{"objective":{"drink":8.761904761904761,"app":29.268934240362814,"coffee":9.096560846560847},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":8.761904761904761,"app":13.998185941043085,"coffee":2.59901738473167},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":17.523809523809522,"app":20.360997732426302,"coffee":6.497543461829176},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":25.19047619047619,"app":12.725623582766442,"coffee":6.497543461829176},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":17.523809523809522,"app":6.362811791383221,"coffee":10.39606953892668},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":67.9047619047619,"app":26.723809523809525,"coffee":11.695578231292515},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":37.238095238095234,"app":12.725623582766442,"coffee":14.294595616024187},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ANDREA","center":"ARIBAU","days":{"LUNES":{"objective":{"drink":15.28486293206198,"app":12.011356956249351,"coffee":8.296000545515762},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":12.009535160905841,"app":18.684333043054547,"coffee":23.7028587014736},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":41.48748510131109,"app":18.684333043054547,"coffee":17.7771440261052},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":58.95589988081049,"app":65.39516565069091,"coffee":18.962286961178883},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":28.38617401668653,"app":28.02649956458182,"coffee":22.51771576639992},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":53.49702026221693,"app":34.69947565138701,"coffee":16.592001091031523},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":28.38617401668653,"app":24.022713912498702,"coffee":11.8514293507368},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"NACHO","center":"BALBOA","days":{"LUNES":{"objective":{"drink":107.64302059496566,"app":29.45506338725133,"coffee":17.592829202645454},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":98.67276887871853,"app":17.405264728830335,"coffee":16.33619854531364},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":50.45766590389016,"app":76.31539150333299,"coffee":27.645874461299996},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":74.0045766590389,"app":36.149395975263,"coffee":15.079567887981817},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":88.5812356979405,"app":36.149395975263,"coffee":25.132613146636363},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":77.36842105263158,"app":24.099597316842,"coffee":12.566306573318181},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":43.72997711670481,"app":13.388665176023332,"coffee":2.513261314663636},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ANDREA","center":"BARCELONA CAN SEGALAR","days":{"LUNES":{"objective":{"drink":18.34068253880316,"app":28.915465992236147,"coffee":22.683557277420533},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":36.68136507760632,"app":19.276977328157432,"coffee":20.163162024373808},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":22.00881904656379,"app":38.553954656314865,"coffee":18.902964397850447},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":33.01322856984569,"app":34.42317380028113,"coffee":12.60197626523363},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":53.79933544715594,"app":37.17702770430362,"coffee":15.122371518280357},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":26.89966772357797,"app":45.43858941637109,"coffee":21.423359650897172},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":25.676955554324426,"app":33.04624684826989,"coffee":25.20395253046726},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ANDREA","center":"BARCELONA EIXAMPLE","days":{"LUNES":{"objective":{"drink":19.282700421940927,"app":19.31849952820951,"coffee":27.364619867423905},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":42.42194092827005,"app":6.439499842736504,"coffee":21.891695893939126},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":14.140646976090014,"app":11.269124724788883,"coffee":10.945847946969563},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":41.13642756680731,"app":24.14812441026189,"coffee":23.259926887310318},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":66.84669479606188,"app":33.80737417436665,"coffee":28.7328508607951},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":37.27988748241913,"app":40.24687401710315,"coffee":19.155233907196735},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":12.855133614627285,"app":9.659249764104755,"coffee":15.05054092708315},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"TONY","center":"BENICASSIM","days":{"LUNES":{"objective":{"drink":52.769409038238706,"app":51.90538274283704,"coffee":16.921622677635618},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":38.23870220162225,"app":26.817781083799137,"coffee":10.152973606581371},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":40.53302433371958,"app":32.87340907046345,"coffee":12.691217008226714},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":35.17960602549247,"app":23.357422234276665,"coffee":6.768649071054247},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":55.828505214368484,"app":50.175203318075816,"coffee":9.30689247269959},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":84.88991888760138,"app":60.556279866643216,"coffee":38.91973215856192},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":76.4774044032445,"app":25.95269137141852,"coffee":35.5354076230348},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"JOSE","center":"BLASCO IBAÑEZ","days":{"LUNES":{"objective":{"drink":65.44925890807369,"app":58.46091455467415,"coffee":22.118825691289274},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":47.788347774149045,"app":19.486971518224713,"coffee":16.589119268466956},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":72.72139878674854,"app":46.2815573557837,"coffee":34.28417982149837},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":66.48813603359866,"app":58.46091455467415,"coffee":22.118825691289274},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":99.73220405039801,"app":97.43485759112359,"coffee":48.6614165208364},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":98.69332692487302,"app":59.67885027456319,"coffee":69.6743009275612},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":77.91578441437343,"app":60.89678599445223,"coffee":40.91982752888516},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"TONY","center":"CASINO","days":{"LUNES":{"objective":{"drink":23.023066485753052,"app":36.02469507648633,"coffee":9.380454793995975},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":61.39484396200814,"app":37.18678201443749,"coffee":15.634091323326627},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":52.76119402985074,"app":13.94504325541406,"coffee":37.5218191759839},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":44.12754409769335,"app":29.05217344877929,"coffee":29.18363713687637},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":60.43554952510176,"app":75.53565096682617,"coffee":25.014546117322602},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":104.56309362279511,"app":48.807651393949214,"coffee":68.79000182263715},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":57.557666214382635,"app":25.565912634925777,"coffee":38.564091930872344},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"TONY","center":"CASTELLON","days":{"LUNES":{"objective":{"drink":34.45044527434646,"app":17.919539404385713,"coffee":18.057650260142356},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":31.31858661304223,"app":26.28199112643238,"coffee":22.306509144881737},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":29.230680838839415,"app":32.255170927894284,"coffee":30.80422691436049},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":43.84602125825912,"app":38.22835072935619,"coffee":40.3641594050241},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":35.49439816144786,"app":31.0605349676019,"coffee":35.053085799099875},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":60.54926745188164,"app":62.1210699352038,"coffee":32.92865635673018},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":39.670209709853495,"app":57.342526094034284,"coffee":21.244294423696893},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"AXIER","center":"CONDESA DE VENADITO","days":{"LUNES":{"objective":{"drink":22.794198291105452,"app":18.338403566350955,"coffee":3.7924660078114085},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":21.59450364420517,"app":5.642585712723371,"coffee":11.377398023434225},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":17.995419703504307,"app":9.8745249972659,"coffee":2.5283106718742725},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":21.59450364420517,"app":18.338403566350955,"coffee":21.490640710931313},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":50.38717516981206,"app":15.51711070998927,"coffee":15.169864031245634},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":63.583816285715216,"app":33.85551427634022,"coffee":7.584932015622817},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":22.794198291105452,"app":19.7490499945318,"coffee":15.169864031245634},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"JOSE","center":"CORTES","days":{"LUNES":{"objective":{"drink":33.780869194798505,"app":40.512130105477304,"coffee":24.999095569261886},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":42.49851285797232,"app":36.82920918679755,"coffee":40.21593635055173},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":35.96028011059196,"app":22.097525512078526,"coffee":21.738343973271206},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":53.39556743693958,"app":29.463367349438037,"coffee":38.04210195322461},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":124.22642220022678,"app":28.235727043211448,"coffee":28.25984716525257},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":77.36908751066755,"app":71.20313776114192,"coffee":35.86826755589749},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":49.03674560535268,"app":31.918647961891207,"coffee":16.303757979953406},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ALEXIS","center":"DENIA","days":{"LUNES":{"objective":{"drink":29.866666666666667,"app":19.91111111111111,"coffee":8.213333333333335},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":42.31111111111111,"app":31.11111111111111,"coffee":16.42666666666667},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":23.644444444444446,"app":9.955555555555556,"coffee":9.582222222222223},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":22.4,"app":24.888888888888886,"coffee":9.582222222222223},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":39.82222222222222,"app":52.266666666666666,"coffee":10.951111111111112},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":105.77777777777779,"app":69.68888888888888,"coffee":24.64},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":59.733333333333334,"app":34.84444444444444,"coffee":24.64},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ALEXIS","center":"ELCHE","days":{"LUNES":{"objective":{"drink":17.333333333333332,"app":42.459669357939255,"coffee":9.261700965215807},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":32.627450980392155,"app":41.312110726643596,"coffee":12.734838827171737},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":19.372549019607842,"app":35.57431757016532,"coffee":5.78856310325988},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":16.313725490196077,"app":25.246289888504425,"coffee":17.36568930977964},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":55.05882352941176,"app":78.03398692810457,"coffee":20.838827171735566},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":108.07843137254902,"app":114.75586312956554,"coffee":20.838827171735566},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":37.72549019607843,"app":51.6401384083045,"coffee":28.942815516299397},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ALEXIS","center":"GANDIA","days":{"LUNES":{"objective":{"drink":31.951600744345203,"app":44.22795535391129,"coffee":32.865814959291335},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":36.68517122498894,"app":35.12219983987073,"coffee":18.78046569102362},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":26.034637643540535,"app":35.12219983987073,"coffee":22.30180300809055},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":5.916963100804667,"app":22.113977676955646,"coffee":12.91157016257874},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":60.3530236282076,"app":50.732066435368836,"coffee":43.42982691049212},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":66.26998672901227,"app":97.56166622186313,"coffee":49.298722438937},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":41.41874170563268,"app":44.22795535391129,"coffee":30.518256747913384},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ANDREA","center":"GRACIA","days":{"LUNES":{"objective":{"drink":30.56872037914692,"app":25.357840120392627,"coffee":24.9736304215988},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":17.118483412322274,"app":10.441463578985198,"coffee":13.874239123110442},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":12.227488151658767,"app":14.916376541407425,"coffee":13.874239123110442},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":56.246445497630326,"app":46.24076727836302,"coffee":23.586206509287756},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":23.232227488151658,"app":19.391289503829654,"coffee":0},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":35.459715639810426,"app":10.441463578985198,"coffee":24.9736304215988},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":15.895734597156398,"app":14.916376541407425,"coffee":12.4868152107994},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"SERGIO","center":"GRAN VIA","days":{"LUNES":{"objective":{"drink":11.849205079330988,"app":8.425031544470993,"coffee":7.478970710623106},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":19.748675132218313,"app":14.442911219093128,"coffee":16.026365808478083},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":9.874337566109157,"app":12.035759349244275,"coffee":11.752668259550592},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":45.42195280410212,"app":15.646487154017557,"coffee":26.7106096807968},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":63.1957604230986,"app":54.160917071599236,"coffee":21.368487744637445},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":75.0449655024296,"app":36.10727804773283,"coffee":33.12115600418804},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":19.748675132218313,"app":40.92158178743053,"coffee":8.547395097854976},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"JOSE","center":"LA CAÑADA","days":{"LUNES":{"objective":{"drink":25.149110807113544,"app":46.10670314637483,"coffee":16.85244151425721},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":41.91518467852257,"app":47.15458276333789,"coffee":14.605449312356253},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":31.436388508891927,"app":35.627906976744185,"coffee":8.987968807603847},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":25.149110807113544,"app":20.957592339261286,"coffee":19.099433716158178},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":38.771545827633375,"app":42.96306429548564,"coffee":24.71691422091058},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":61.824897400820795,"app":86.97400820793433,"coffee":26.963906422811544},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":53.44186046511628,"app":35.627906976744185,"coffee":20.222929817108657},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ANDREA","center":"LA MAQUINISTA","days":{"LUNES":{"objective":{"drink":21.668407496876302,"app":47.92036917950853,"coffee":25.991784089962515},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":21.668407496876302,"app":31.946912786339023,"coffee":28.35467355268638},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":14.445604997917535,"app":19.96682049146189,"coffee":21.266005164514784},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":34.91021207830071,"app":43.927005081216166,"coffee":15.358781507705121},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":26.483609162848815,"app":17.304577759266973,"coffee":29.53611828404831},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":77.04322665556019,"app":73.21167513536027,"coffee":36.624786672219905},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":28.89120999583507,"app":19.96682049146189,"coffee":10.633002582257392},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"AXIER","center":"LA MORALEJA","days":{"LUNES":{"objective":{"drink":14.576540755467196,"app":7.288270377733598,"coffee":13.300248212514179},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":13.361829025844932,"app":7.288270377733598,"coffee":7.980148927508507},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":27.93836978131213,"app":26.723658051689863,"coffee":18.620347497519855},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":31.582504970178928,"app":13.361829025844932,"coffee":5.320099285005671},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":47.37375745526839,"app":25.508946322067594,"coffee":21.280397140022686},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":72.88270377733598,"app":38.87077534791252,"coffee":19.95037231877127},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":48.588469184890656,"app":34.01192842942346,"coffee":7.980148927508507},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"AXIER","center":"LAS ROZAS","days":{"LUNES":{"objective":{"drink":6.606321475158624,"app":7.629624118235586,"coffee":10.01482219070174},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":6.606321475158624,"app":3.0518496472942336,"coffee":7.153444421929814},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":2.6425285900634488,"app":0,"coffee":2.861377768771925},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":14.53390724534897,"app":7.629624118235586,"coffee":4.292066653157888},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":9.248850065222072,"app":9.155548941882701,"coffee":4.292066653157888},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":51.52930750623726,"app":50.35551918035486,"coffee":12.876199959473663},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":11.891378655285521,"app":1.5259248236471168,"coffee":0},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"AXIER","center":"LAS TABLAS","days":{"LUNES":{"objective":{"drink":22.566037735849058,"app":26.210548799910065,"coffee":20.479548818646833},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":16.67924528301887,"app":9.53110865451275,"coffee":14.790785257911601},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":18.641509433962263,"app":9.53110865451275,"coffee":7.964268985029323},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":34.339622641509436,"app":35.741657454422814,"coffee":10.239774409323417},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":52,"app":28.593325963538252,"coffee":19.341796106499785},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":29.433962264150942,"app":28.593325963538252,"coffee":31.85707594011729},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":18.641509433962263,"app":27.40193738172416,"coffee":17.066290682205693},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"TONY","center":"LES GAVARRES","days":{"LUNES":{"objective":{"drink":28.207388072735743,"app":21.45256224650197,"coffee":32.68139009101671},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":13.539546274913155,"app":37.857462787944655,"coffee":37.9525820411807},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":56.414776145471485,"app":21.45256224650197,"coffee":26.35595975081993},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":23.694205981098023,"app":46.69087077179841,"coffee":33.7356284810495},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":45.13182091637719,"app":70.66726387083003,"coffee":44.27801238137748},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":64.31284480583749,"app":59.310025034446625,"coffee":49.54920433154147},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":45.13182091637719,"app":42.90512449300394,"coffee":54.82039628170544},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"AXIER","center":"MADRID PLAZA ESPAÑA","days":{"LUNES":{"objective":{"drink":57.290160642570285,"app":51.00333200270964,"coffee":16.244786374413316},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":74.61044176706827,"app":63.36777612457864,"coffee":5.907195045241205},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":62.619477911646584,"app":44.821109941775134,"coffee":16.244786374413316},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":33.308232931726906,"app":23.18333272850438,"coffee":32.48957274882663},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":1.3323293172690762,"app":63.36777612457864,"coffee":2.9535975226206026},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":94.59538152610442,"app":41.72999891130789,"coffee":75.31673682682536},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":42.63453815261044,"app":40.18444339607426,"coffee":50.21115788455025},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"JOSE","center":"MARTINEZ CUBELLS","days":{"LUNES":{"objective":{"drink":30.40701125742781,"app":81.2964451566739,"coffee":16.577676694282147},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":33.78556806380868,"app":50.212510243828,"coffee":32.05017494227882},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":24.77608324679303,"app":59.776797909319036,"coffee":35.36571028113525},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":41.66886727869738,"app":59.776797909319036,"coffee":16.577676694282147},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":49.55216649358606,"app":60.97233386750542,"coffee":39.786424066277156},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":148.65649948075819,"app":99.22948452946962,"coffee":14.367319801711194},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":77.70680654675996,"app":31.083934912845898,"coffee":13.262141355425717},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"NACHO","center":"NH ZURBANO","days":{"LUNES":{"objective":{"drink":51.13636363636363,"app":16.594817958454325,"coffee":11.326641724368997},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":87.5,"app":41.487044896135814,"coffee":22.653283448737994},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":65.90909090909092,"app":31.806734420370788,"coffee":17.61922046012955},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":120.45454545454545,"app":23.509325441143623,"coffee":16.36070471297744},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":132.95454545454544,"app":23.509325441143623,"coffee":28.945862184498548},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":82.95454545454545,"app":31.806734420370788,"coffee":26.428830690194328},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":31.818181818181817,"app":19.360620951530045,"coffee":15.10218896582533},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"AXIER","center":"ORTEGA Y GASSET","days":{"LUNES":{"objective":{"drink":30.080000000000002,"app":22.124146938775507,"coffee":4.953991836734693},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":30.080000000000002,"app":6.507102040816327,"coffee":23.531461224489792},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":33.30285714285714,"app":7.808522448979592,"coffee":11.146481632653058},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":25.782857142857143,"app":23.425567346938774,"coffee":29.723951020408162},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":85.94285714285714,"app":59.86533877551022,"coffee":22.292963265306117},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":76.27428571428571,"app":37.74119183673469,"coffee":82.9793632653061},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":40.82285714285714,"app":6.507102040816327,"coffee":43.34742857142857},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"AXIER","center":"PLAZA DE LOS SITIOS ZARAGOZA","days":{"LUNES":{"objective":{"drink":46.29859991885397,"app":29.100634811647577,"coffee":10.54528884866265},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":24.251647576542553,"app":30.31316126213289,"coffee":12.65434661839518},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":19.84225710808027,"app":33.95074061358884,"coffee":21.0905776973253},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":28.661038045004837,"app":15.762843856309106,"coffee":17.926991042726506},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":44.09390468462282,"app":27.888108361162264,"coffee":32.69039543085422},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":59.52677132424081,"app":52.13863737086857,"coffee":35.85398208545301},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":19.84225710808027,"app":25.46305546019163,"coffee":16.872462157860237},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"AXIER","center":"PUERTO VENECIA","days":{"LUNES":{"objective":{"drink":35.01855235170128,"app":31.980695741260995,"coffee":17.633288114821156},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":18.11304431984549,"app":33.31322473048021,"coffee":21.15994573778539},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":15.697971743866093,"app":15.990347870630497,"coffee":32.91547114766616},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":36.22608863969098,"app":39.975869676576245,"coffee":38.79323385260654},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":33.811016063711584,"app":39.975869676576245,"coffee":17.633288114821156},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":355.01566866897167,"app":101.27220318065982,"coffee":18.808840655809234},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":16.905508031855792,"app":11.992760902972874,"coffee":1.1755525409880772},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"TONY","center":"REUS","days":{"LUNES":{"objective":{"drink":18.55839976862326,"app":20.743432119382934,"coffee":20.623376630949437},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":10.439099869850585,"app":23.3363611343058,"coffee":22.794258381575695},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":15.078699812006398,"app":25.929290149228667,"coffee":27.136021882828206},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":22.038099725240123,"app":32.41161268653583,"coffee":31.477785384080715},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":60.314799248025594,"app":68.71261889545596,"coffee":41.246753261898874},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":12.75889984092849,"app":19.4469676119215,"coffee":7.598086127191897},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":20.87819973970117,"app":19.4469676119215,"coffee":11.93984962844441},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ANDREA","center":"SABADELL","days":{"LUNES":{"objective":{"drink":11.742144602350765,"app":14.558516098252106,"coffee":11.736016134395467},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":10.437461868756234,"app":14.558516098252106,"coffee":15.64802151252729},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":3.914048200783588,"app":2.9117032196504216,"coffee":7.824010756263645},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":10.437461868756234,"app":8.735109658951265,"coffee":9.128012548974253},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":33.92175107345776,"app":27.661180586679002,"coffee":20.864028683369717},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":101.76525322037328,"app":26.205328976853792,"coffee":57.37607887926672},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":71.75755034769912,"app":17.47021931790253,"coffee":50.85606991571368},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"TONY","center":"SAGUNTO","days":{"LUNES":{"objective":{"drink":27.51656337598444,"app":26.425359292665405,"coffee":24.609790049770215},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":58.09052268263382,"app":56.153888496914,"coffee":36.914685074655324},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":40.765279075532504,"app":48.446492036553245,"coffee":20.508158374808517},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":26.497431399096133,"app":51.74966194813642,"coffee":27.686013805991493},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":56.0522587288572,"app":46.244378762164466,"coffee":42.04172466835745},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":64.2053145439637,"app":62.760228320080344,"coffee":34.86386923717448},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":33.63135523731432,"app":35.23381239022055,"coffee":12.304895024885107},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"AXIER","center":"SAN BERNARDO","days":{"LUNES":{"objective":{"drink":42.06654676258993,"app":24.545853928368096,"coffee":11.477310148284252},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":45.38758992805755,"app":25.9095124799441,"coffee":12.752566831426945},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":69.74190647482014,"app":43.63707365043218,"coffee":28.05564702913928},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":18.819244604316548,"app":15.000244067336059,"coffee":19.128850247140416},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":79.70503597122303,"app":43.63707365043218,"coffee":21.67936361342581},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":55.35071942446043,"app":60.000976269344235,"coffee":19.128850247140416},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":44.280575539568346,"app":28.636829583096112,"coffee":19.128850247140416},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"NACHO","center":"TAGOMAGO NH LAGASCA","days":{"LUNES":{"objective":{"drink":58.37538461538461,"app":20.682319526627218,"coffee":12.5643550295858},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":77.83384615384615,"app":11.030570414201183,"coffee":23.872274556213018},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":53.79692307692308,"app":20.682319526627218,"coffee":20.102968047337278},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":83.55692307692307,"app":37.228175147928994,"coffee":36.43662958579882},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":78.97846153846154,"app":51.016388165680475,"coffee":31.4108875739645},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":83.55692307692307,"app":26.19760473372781,"coffee":69.1039526627219},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":36.62769230769231,"app":15.167034319526628,"coffee":27.641581065088758},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"JOSE","center":"TAGOMAGO VLC","days":{"LUNES":{"objective":{"drink":60.8196261682243,"app":28.210364223949693,"coffee":38.1411214953271},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":32.98691588785047,"app":35.90409992139052,"coffee":18.55514018691589},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":21.64766355140187,"app":14.105182111974846,"coffee":19.585981308411217},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":52.572897196261685,"app":35.90409992139052,"coffee":44.32616822429907},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":106.1766355140187,"app":39.750967770110925,"coffee":39.171962616822434},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":62.88130841121495,"app":46.16241418464495,"coffee":41.23364485981308},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":39.171962616822434,"app":20.516628526508867,"coffee":37.11028037383178},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"TONY","center":"TARRAGONA RAMBLA","days":{"LUNES":{"objective":{"drink":23.80155514198217,"app":27.26472165980786,"coffee":21.965220636857573},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":49.67281073109322,"app":27.26472165980786,"coffee":18.827331974449343},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":12.418202682773305,"app":11.153749769921397,"coffee":13.597517537102307},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":25.87125558911105,"app":28.50402718979913,"coffee":23.011183524326977},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":38.28945827188436,"app":45.854304609676866,"coffee":32.424849511551656},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":33.11520715406215,"app":49.572221199650656,"coffee":3.137888662408225},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":18.627304024159955,"app":19.828888479860264,"coffee":15.689443312041123},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"AXIER","center":"TEIXEIRA","days":{"LUNES":{"objective":{"drink":13.655454570770184,"app":2.935936814697753,"coffee":4.2504116164604815},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":11.172644648811968,"app":10.275778851442137,"coffee":2.8336077443069874},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":32.2765289854568,"app":20.551557702884274,"coffee":17.001646465841926},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":8.689834726853753,"app":22.01952611023315,"coffee":1.4168038721534937},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":38.48355379035234,"app":32.29530496167529,"coffee":11.33443097722795},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":53.38041332210163,"app":19.083589295535397,"coffee":45.3377239089118},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":29.793719063498585,"app":13.21171566613989,"coffee":29.75288131522337},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ANDREA","center":"TERRASSA","days":{"LUNES":{"objective":{"drink":36.2690200617284,"app":22.914197530864197,"coffee":38.84567901234568},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":30.01574074074074,"app":32.93915895061728,"coffee":20.636766975308646},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":5.002623456790123,"app":11.457098765432098,"coffee":10.925347222222223},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":12.506558641975309,"app":44.396257716049384,"coffee":12.139274691358025},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":77.54066358024691,"app":54.421219135802474,"coffee":42.48746141975309},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":91.29787808641976,"app":54.421219135802474,"coffee":57.054591049382715},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":72.5380401234568,"app":7.160686728395062,"coffee":32.77604166666667},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ALEXIS","center":"TORRENT","days":{"LUNES":{"objective":{"drink":37.06519611205377,"app":54.837528181071676,"coffee":51.10985666034829},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":85.77945385932443,"app":47.83699266859445,"coffee":36.344786958469896},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":33.88817930244916,"app":29.16889796865515,"coffee":22.715491849043687},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":27.53414568323995,"app":57.17104001856409,"coffee":35.20901236601772},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":96.3695098913398,"app":80.5061583934882,"coffee":59.06027880751359},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":70.95337541450294,"app":81.67291431223441,"coffee":29.530139403756795},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":19.062100857627655,"app":38.502945318624796,"coffee":22.715491849043687},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"JOSE","center":"TURQUETA","days":{"LUNES":{"objective":{"drink":25.231822031059707,"app":6.489469552655672,"coffee":20.897668889961505},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":8.776285923846855,"app":2.595787821062269,"coffee":11.609816049978614},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":28.52292925250228,"app":18.170514747435885,"coffee":19.736687284963644},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":60.336965726447126,"app":18.170514747435885,"coffee":25.541595309952953},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":29.619964992983135,"app":20.76630256849815,"coffee":9.287852839982891},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":239.1537914248268,"app":44.128392958058576,"coffee":56.88809864489521},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":162.36128959116684,"app":41.5326051369963,"coffee":38.31239296492943},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"TONY","center":"VIRGEN","days":{"LUNES":{"objective":{"drink":158.56004250797025,"app":49.208289054197664,"coffee":13.265146287723846},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":107.16471838469712,"app":62.33049946865037,"coffee":11.054288573103205},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":69.98512221041445,"app":53.58235919234856,"coffee":11.054288573103205},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":149.81190223166845,"app":104.97768331562168,"coffee":37.5845811485509},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":136.6896918172157,"app":97.3230605738576,"coffee":7.738002001172244},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":59.04994686503719,"app":158.56004250797025,"coffee":16.58143285965481},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":18.58979808714134,"app":69.98512221041445,"coffee":8.843430858482565},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"ALEXIS","center":"VISTA HERMOSA","days":{"LUNES":{"objective":{"drink":20.439276485788113,"app":18.41330582430276,"coffee":21.863291969633238},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":35.7687338501292,"app":23.01663228037845,"coffee":18.411193237585884},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":15.329457364341085,"app":29.921621964491987,"coffee":20.712592392284115},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":27.593023255813954,"app":17.262474210283838,"coffee":12.657695350840294},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":38.83462532299742,"app":17.262474210283838,"coffee":23.013991546982353},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":67.44961240310077,"app":51.787422630851516,"coffee":42.57588436191735},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":39.85658914728682,"app":12.659147754208147,"coffee":27.616789856378823},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"SERGIO","center":"VIVEROS","days":{"LUNES":{"objective":{"drink":54.40685095844866,"app":41.14674333113395,"coffee":31.668026679359254},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":55.43339531615524,"app":33.66551727092777,"coffee":20.056416896927526},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":65.69883889322102,"app":19.94993616054979,"coffee":41.16843468316703},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":59.53957274698155,"app":34.91238828096213,"coffee":30.61242579004728},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":57.486484031568395,"app":43.64048535120267,"coffee":36.946031125919134},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":39.00868559284998,"app":59.849808481649376,"coffee":23.223219564863452},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":15.398165365598677,"app":38.653001311065225,"coffee":20.056416896927526},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"AXIER","center":"ZARAGOZA ACTUR","days":{"LUNES":{"objective":{"drink":10.678873916752579,"app":21.315819117855344,"coffee":5.662431941923775},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":16.611581648281792,"app":11.368436862856182,"coffee":9.05989110707804},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":9.492332370446736,"app":4.263163823571069,"coffee":10.192377495462795},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":10.678873916752579,"app":9.94738225499916,"coffee":11.32486388384755},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":24.917372472422684,"app":8.526327647142137,"coffee":24.91470054446461},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":94.92332370446738,"app":32.684255980711534,"coffee":19.252268602540834},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":42.715495667010316,"app":7.105273039285115,"coffee":11.32486388384755},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"AXIER","center":"ZIELO POZUELO","days":{"LUNES":{"objective":{"drink":36.658185840707965,"app":10.62726353864829,"coffee":16.230901010259224},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":53.21349557522124,"app":28.845429604902503,"coffee":12.173175757694418},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":28.38053097345133,"app":13.66362454969066,"coffee":13.525750841882685},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":42.57079646017699,"app":16.699985560733026,"coffee":14.878325926070953},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":37.84070796460177,"app":28.845429604902503,"coffee":6.762875420941342},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":18.920353982300885,"app":110.82717690304645,"coffee":6.762875420941342},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":13.007743362831858,"app":28.845429604902503,"coffee":8.115450505129612},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"AXIER","center":"ZURBARAN","days":{"LUNES":{"objective":{"drink":19.398982367884795,"app":17.69671086388778,"coffee":5.4133148753562965},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":12.932654911923196,"app":26.545066295831667,"coffee":13.53328718839074},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":15.519185894307837,"app":10.32308133726787,"coffee":6.76664359419537},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":27.158575315038718,"app":8.84835543194389,"coffee":4.059986156517223},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":27.158575315038718,"app":16.221984958563795,"coffee":16.23994462606889},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":27.158575315038718,"app":8.84835543194389,"coffee":16.23994462606889},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":14.225920403115515,"app":17.69671086388778,"coffee":8.119972313034445},"real":{"drink":null,"app":null,"coffee":null}}}},{"am":"","center":"TOTAL","days":{"LUNES":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}},"MARTES":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}},"MIÉRCOLES":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}},"JUEVES":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}},"VIERNES":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}},"SÁBADO":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}},"DOMINGO":{"objective":{"drink":null,"app":null,"coffee":null},"real":{"drink":null,"app":null,"coffee":null}}}}]}};
+
+const EMBEDDED_SUMMARY = {
+  "14 AL 20": {vsugTotal:133436.5693521634, gapVsug:5224.7401946071395, sourceCol:"C"},
+  "21 AL 27": {vsugTotal:138661.30954677056, gapVsug:null, sourceCol:"D"}
+};
+const SUMMARY_STORAGE_KEY = "vsug_director_operaciones_summary_v1";
+const EMBEDDED_EURO_DATA = {"14 AL 20":{"label":"14 AL 20","year":2026,"isoWeek":38,"total":215357.1999999999,"centers":{"Alameda":5634.909090909086,"Albacete":5192.409090909085,"Alicante":5446.554545454541,"Almeria":2453.636363636363,"Aribau":6268.772727272726,"Balboa":5157.536363636365,"Barcelona Can Segalar":3542.699999999999,"Barcelona Eixample":3605.818181818183,"Benicassim":5405.9727272727205,"Blasco Ibañez":5458.527272727271,"Casino":6126.690909090902,"Castellon":4837.500000000001,"Condesa de Venadito":3241.045454545457,"Cortes":4784.454545454542,"Denia":3852.309090909091,"Elche":6000.036363636358,"Gandía":4275.709090909089,"Gracia":3306.754545454546,"Gran Via":3102.7727272727257,"Javea":644.2545454545455,"La Cañada":5089.827272727264,"La Maquinista":3897.9272727272723,"La Moraleja":4548.918181818179,"Las Rozas":1948.4999999999998,"Las Tablas":4204.127272727273,"Les Gavarres":4781.009090909087,"Madrid Plaza España":6850.854545454543,"Martinez Cubells":6122.054545454538,"NH Zurbano":4312.990909090908,"Ortega y Gasset":3232.7545454545466,"Plaza de los Sitios Zaragoza":3533.5636363636354,"Puerto Venecia":3640.163636363636,"Quick Saona":2578.354545454546,"Reus":3594.8727272727247,"Sabadell":1984.8454545454542,"Sagunto":5842.41818181818,"San Bernardo":5837.954545454547,"Tagomago VLC":5783.3727272727265,"Tarragona Rambla":6463.336363636362,"Teixeira":2371.5,"Terrassa":3763.6818181818176,"Torrent":6031.854545454536,"Turqueta":2902.1909090909085,"Virgen":12456.954545454533,"Vista Hermosa":3185.2909090909084,"Viveros":4386.327272727269,"Zaragoza Actur":2696.9181818181805,"Zielo Pozuelo":3029.6363636363635,"Zurbarán":1946.636363636363}}};
+const EURO_STORAGE_KEY = "vsug_director_operaciones_euro_by_local_v1";
+
+const SHEET_PREFIX = "OBJ VS REAL";
+const STORAGE_KEY = "vsug_director_operaciones_data_v2";
+
+function isObjectiveSheet(name){
+  return /^OBJ\s+VS\s+REAL\b/i.test(String(name||"").trim());
+}
+function objectiveSheetsFromWorkbook(wb){
+  return wb.SheetNames.filter(isObjectiveSheet);
+}
+const DAYS = ["LUNES","MARTES","MIÉRCOLES","JUEVES","VIERNES","SÁBADO","DOMINGO"];
+const METRICS = [
+  {key:"drink",label:"2ª bebida",icon:"🥂",hint:"Ofrecer una segunda bebida antes de retirar el principal o cuando la primera esté al 30–40%."},
+  {key:"app",label:"Algo para picar",icon:"🥨",hint:"Abrir la comanda con una recomendación concreta para compartir: entrante, picoteo o aperitivo."},
+  {key:"coffee",label:"Café",icon:"☕",hint:"Cerrar cada mesa con una pregunta explícita de café/infusión, evitando una pregunta genérica de “¿algo más?”."}
+];
+let DATA = EMBEDDED_DATA;
+let SUMMARY_DATA = EMBEDDED_SUMMARY;
+let EURO_DATA = EMBEDDED_EURO_DATA;
+let activeStatusFilter = null;
+
+const $ = s => document.querySelector(s);
+const fmt = n => (n==null || !isFinite(n)) ? "—" : new Intl.NumberFormat("es-ES",{maximumFractionDigits:0}).format(n);
+const fmtEur = n => (n==null || !isFinite(n)) ? "Pendiente" : new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",minimumFractionDigits:0,maximumFractionDigits:0}).format(n);
+const pct = n => (n==null || !isFinite(n)) ? "—" : `${n.toFixed(1).replace(".",",")}%`;
+const esc = s => String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
+
+
+function normalizeWeekLabel(v){
+  return String(v??"")
+    .toUpperCase()
+    .replace(/^OBJ\s+VS\s+REAL\s*/i,"")
+    .replace(/\s+/g," ")
+    .trim();
+}
+
+function colLetter(idx){
+  let n=idx+1, s="";
+  while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26); }
+  return s;
+}
+
+function parseSummarySheet(wb, objectiveSheets){
+  const summaryName=wb.SheetNames.find(n=>String(n).trim().toUpperCase()==="RESUMEN");
+  if(!summaryName) return {};
+
+  const rows=XLSX.utils.sheet_to_json(
+    wb.Sheets[summaryName],
+    {header:1,raw:true,defval:null,range:"A1:ZZ10"}
+  );
+  const headers=rows[0]||[];
+  const labels=objectiveSheets.map(s=>normalizeWeekLabel(s));
+
+  // Explicit header matches are preferred. If a future week has no header yet,
+  // infer the adjacent RESUMEN column from the closest known weekly anchor.
+  const anchors=[];
+  labels.forEach((label,i)=>{
+    const col=headers.findIndex(v=>normalizeWeekLabel(v)===label);
+    if(col>=0) anchors.push({i,col});
+  });
+
+  const result={};
+  labels.forEach((label,i)=>{
+    let col=headers.findIndex(v=>normalizeWeekLabel(v)===label);
+
+    if(col<0 && anchors.length){
+      let best=anchors[0];
+      anchors.forEach(a=>{ if(Math.abs(a.i-i)<Math.abs(best.i-i)) best=a; });
+      col=best.col+(i-best.i);
+    }
+
+    if(col<0) return;
+
+    const vsugTotal=num(rows[3]?.[col]); // fila 4
+    const gapVsug=num(rows[4]?.[col]);   // fila 5
+    result[label]={vsugTotal,gapVsug,sourceCol:colLetter(col)};
+  });
+
+  return result;
+}
+
+
+function normalizeLocalKey(v){
+  return String(v??"")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g," ")
+    .replace(/\s+/g," ")
+    .trim();
+}
+
+function euroWeekLabelFromIso(year,week){
+  const jan4=new Date(Date.UTC(year,0,4));
+  const dow=jan4.getUTCDay()||7;
+  const week1Mon=new Date(jan4);
+  week1Mon.setUTCDate(jan4.getUTCDate()-(dow-1));
+  const mon=new Date(week1Mon);
+  mon.setUTCDate(week1Mon.getUTCDate()+(week-1)*7);
+  const sun=new Date(mon);
+  sun.setUTCDate(mon.getUTCDate()+6);
+  return `${mon.getUTCDate()} AL ${String(sun.getUTCDate()).padStart(2,"0")}`;
+}
+
+function currentEuroWeek(){
+  const label=normalizeWeekLabel(currentWeek()?.label);
+  return EURO_DATA[label]||null;
+}
+
+function euroForCenter(centerName){
+  const w=currentEuroWeek();
+  if(!w) return null;
+  const target=normalizeLocalKey(centerName);
+  const match=Object.entries(w.centers||{}).find(([name])=>normalizeLocalKey(name)===target);
+  return match ? match[1] : null;
+}
+
+function parseEuroExportSheet(wb){
+  const exportName=wb.SheetNames.find(n=>String(n).trim().toUpperCase()==="EXPORT");
+  if(!exportName) return null;
+
+  const rows=XLSX.utils.sheet_to_json(
+    wb.Sheets[exportName],
+    {header:1,raw:true,defval:null,range:"A1:AD500"}
+  );
+  if(!rows.length) return null;
+
+  const headers=(rows[0]||[]).map(x=>String(x??"").trim());
+  const localCol=headers.findIndex(h=>h.toUpperCase()==="LOCAL");
+  const euroCol=headers.findIndex(h=>h.toUpperCase()==="€ TOTAL VS");
+  if(localCol<0 || euroCol<0) return null;
+
+  const filterText=rows.flat().filter(x=>typeof x==="string" && /Filtros aplicados/i.test(x)).join("\n");
+  const yearMatch=filterText.match(/AÑO\s+es\s+(\d{4})/i);
+  const weekMatch=filterText.match(/SEMANA\s+es\s+(\d{1,2})/i);
+  if(!yearMatch || !weekMatch) return null;
+
+  const year=Number(yearMatch[1]), isoWeek=Number(weekMatch[1]);
+  const label=euroWeekLabelFromIso(year,isoWeek);
+  const centers={};
+  let total=null;
+
+  rows.slice(1).forEach(row=>{
+    const name=String(row[localCol]??"").trim();
+    const value=num(row[euroCol]);
+    if(!name) return;
+    if(name.toUpperCase()==="TOTAL"){ if(value!=null) total=value; return; }
+    if(value!=null) centers[name]=value;
+  });
+
+  if(total==null) total=Object.values(centers).reduce((a,b)=>a+(Number(b)||0),0);
+  return {label,year,isoWeek,total,centers};
+}
+
+function currentWeek(){ return DATA[$("#weekSelect").value]; }
+function num(v){ return typeof v==="number" && isFinite(v) ? v : null; }
+
+function summarizeCenter(c){
+  const metric = {};
+  let anyReal=false, objTotal=0, realTotal=0;
+  METRICS.forEach(m=>{
+    let o=0,r=0,has=false;
+    DAYS.forEach(d=>{
+      const dd=c.days[d]||{};
+      const ov=num(dd.objective?.[m.key]); const rv=num(dd.real?.[m.key]);
+      if(ov!=null) o+=ov;
+      if(rv!=null){r+=rv;has=true;anyReal=true;}
+    });
+    metric[m.key]={objective:o,real:has?r:null,attain:has&&o>0?r/o*100:null,delta:has?r-o:null};
+    objTotal+=o;if(has)realTotal+=r;
+  });
+  const attain=anyReal&&objTotal>0?realTotal/objTotal*100:null;
+  const delta=anyReal?realTotal-objTotal:null;
+  return {...c,metric,objective:objTotal,real:anyReal?realTotal:null,attain,delta,hasReal:anyReal};
+}
+function statusOf(s){
+  if(!s.hasReal) return "pending";
+  const floor=Number($("#rangeThreshold").value||95);
+  if(s.attain>=100) return "above";
+  if(s.attain>=floor) return "range";
+  return "below";
+}
+function statusMeta(st){
+  return {
+    above:{label:"Superó objetivo",cls:"green",icon:"↑"},
+    range:{label:"En rango",cls:"amber",icon:"≈"},
+    below:{label:"Por debajo",cls:"red",icon:"↓"},
+    pending:{label:"Pendiente",cls:"gray",icon:"·"}
+  }[st];
+}
+function metricColor(v){
+  if(v==null) return "#9aa2b1";
+  if(v>=100) return "var(--green)";
+  if(v>=Number($("#rangeThreshold").value||95)) return "var(--amber)";
+  return "var(--red)";
+}
+function weekCenters(){
+  const w=currentWeek(); if(!w)return [];
+  const am=$("#amSelect").value;
+  return w.centers.filter(c=>!am||c.am===am).map(summarizeCenter);
+}
+function weakestMetric(s){
+  const avail=METRICS.map(m=>({m,x:s.metric[m.key]})).filter(x=>x.x.attain!=null);
+  if(!avail.length)return null;
+  avail.sort((a,b)=>a.x.attain-b.x.attain);
+  return avail[0];
+}
+function render(){
+  const w=currentWeek(); if(!w)return;
+  const centers=weekCenters();
+  $("#periodTitle").textContent=`Semana ${w.label}`;
+  const withReal=centers.filter(c=>c.hasReal).length;
+  $("#dataMeta").textContent=`${centers.length} centros · ${withReal} con datos reales · ${centers.length-withReal} pendientes · ${Object.keys(DATA).filter(isObjectiveSheet).length} semana(s) disponibles`;
+  renderMoneyKpis(); renderKpis(centers); renderStatus(centers); renderOpps(centers); renderTable(centers);
+}
+
+function renderMoneyKpis(){
+  const w=currentWeek();
+  const label=normalizeWeekLabel(w?.label);
+  const s=SUMMARY_DATA[label]||null;
+  const source=s?.sourceCol ? `RESUMEN · ${s.sourceCol}` : "RESUMEN";
+
+  $("#moneyKpis").innerHTML=`
+    <article class="money-kpi">
+      <div class="money-kpi-head">
+        <div class="money-kpi-title">💶 Venta sugerida total</div>
+        <span class="money-kpi-source">${source}${s?.sourceCol? "4":""}</span>
+      </div>
+      <div class="money-kpi-value">${fmtEur(s?.vsugTotal)}</div>
+      <div class="money-kpi-foot">Valor semanal de venta sugerida del periodo seleccionado.</div>
+    </article>
+    <article class="money-kpi">
+      <div class="money-kpi-head">
+        <div class="money-kpi-title">📈 Añadido sobre venta sugerida</div>
+        <span class="money-kpi-source">${source}${s?.sourceCol? "5":""}</span>
+      </div>
+      <div class="money-kpi-value">${fmtEur(s?.gapVsug)}</div>
+      <div class="money-kpi-foot">Añadido semanal informado en RESUMEN para el mismo periodo.</div>
+    </article>`;
+}
+
+function renderKpis(centers){
+  $("#kpis").innerHTML=METRICS.map(m=>{
+    let o=0,r=0,has=false;
+    centers.forEach(c=>{o+=c.metric[m.key].objective;if(c.metric[m.key].real!=null){r+=c.metric[m.key].real;has=true;}});
+    const a=has&&o>0?r/o*100:null, d=has?r-o:null;
+    const width=a==null?0:Math.min(100,a);
+    return `<article class="kpi">
+      <div class="kpi-head"><div class="kpi-title">${m.icon} ${m.label}</div><span class="pill">${a==null?"Pendiente":pct(a)}</span></div>
+      <div class="kpi-value"><strong>${has?fmt(r):"—"}</strong><span>real / ${fmt(o)} objetivo</span></div>
+      <div class="progress"><i style="width:${width}%;background:${metricColor(a)}"></i></div>
+      <div class="kpi-foot"><span>Diferencia</span><span class="${d!=null?(d>=0?"delta pos":"delta neg"):""}">${d==null?"—":`${d>=0?"+":""}${fmt(d)}`}</span></div>
+    </article>`;
+  }).join("");
+}
+function renderStatus(centers){
+  const counts={above:0,range:0,below:0,pending:0};
+  centers.forEach(c=>counts[statusOf(c)]++);
+  const order=["above","range","below","pending"];
+  $("#statusCards").innerHTML=order.map(st=>{
+    const m=statusMeta(st);
+    return `<button class="status-card ${m.cls}" data-status="${st}"><span class="n">${counts[st]}</span><span class="l">${m.icon} ${m.label}</span></button>`;
+  }).join("");
+  document.querySelectorAll("[data-status]").forEach(b=>b.onclick=()=>openStatusList(b.dataset.status,centers));
+}
+function renderOpps(centers){
+  const agg=METRICS.map(m=>{
+    let gap=0,o=0,r=0;
+    centers.forEach(c=>{const x=c.metric[m.key];o+=x.objective;if(x.real!=null)r+=x.real;});
+    gap=Math.max(0,o-r);
+    return {m,gap,o,r};
+  }).sort((a,b)=>b.gap-a.gap);
+  const anyReal=centers.some(c=>c.hasReal);
+  if(!anyReal){
+    $("#opportunities").innerHTML=`<div class="empty">Aún no hay datos REAL para construir prioridades comerciales.</div>`;
+    return;
+  }
+  $("#opportunities").innerHTML=agg.map(x=>`<div class="opportunity">
+    <div class="ico">${x.m.icon}</div><div><div class="opp-title">${x.m.label} · oportunidad ≈ ${fmt(x.gap)} uds.</div>
+    <div class="opp-copy">${x.m.hint}</div></div></div>`).join("");
+}
+function renderTable(centers){
+  const q=$("#search").value.trim().toLowerCase();
+  let rows=centers.filter(c=>!q||c.center.toLowerCase().includes(q)||c.am.toLowerCase().includes(q));
+  rows.sort((a,b)=>{
+    if(a.attain==null&&b.attain!=null)return 1;if(a.attain!=null&&b.attain==null)return -1;
+    return (a.attain??0)-(b.attain??0);
+  });
+  if(!rows.length){$("#centersBody").innerHTML=`<tr><td colspan="10" class="empty">Sin centros para este filtro.</td></tr>`;return;}
+  $("#centersBody").innerHTML=rows.map(c=>{
+    const st=statusOf(c), sm=statusMeta(st), weak=weakestMetric(c);
+    const bars=METRICS.map(m=>{
+      const a=c.metric[m.key].attain; return `<td><div class="metricbar"><div class="track"><i style="width:${a==null?0:Math.min(100,a)}%;background:${metricColor(a)}"></i></div><b>${pct(a)}</b></div></td>`;
+    }).join("");
+    const focus=!c.hasReal?"Pendiente de carga":(st==="above"?"Mantener y replicar":weak?weak.m.label:"—");
+    return `<tr>
+      <td><b>${esc(c.am)}</b></td>
+      <td><button class="centerbtn" data-center="${esc(c.center)}">${esc(c.center)}</button></td>
+      <td><span class="badge ${sm.cls}">${sm.icon} ${sm.label}</span></td>
+      <td><b>${pct(c.attain)}</b><div class="small">${c.real==null?"—":`${fmt(c.real)} / ${fmt(c.objective)}`}</div></td>
+      <td><b>${fmtEur(euroForCenter(c.center))}</b><div class="small">${euroForCenter(c.center)==null?"Pendiente":"semana seleccionada"}</div></td>
+      ${bars}
+      <td class="${c.delta!=null?(c.delta>=0?"delta pos":"delta neg"):""}">${c.delta==null?"—":`${c.delta>=0?"+":""}${fmt(c.delta)}`}</td>
+      <td>${esc(focus)}</td>
+    </tr>`;
+  }).join("");
+  document.querySelectorAll("[data-center]").forEach(b=>b.onclick=()=>openCenter(b.dataset.center,centers));
+}
+function openStatusList(st,centers){
+  const sm=statusMeta(st); const list=centers.filter(c=>statusOf(c)===st).sort((a,b)=>(a.attain??-1)-(b.attain??-1));
+  $("#listTitle").textContent=`${sm.label} · ${list.length} centros`;
+  $("#listSub").textContent= st==="range" ? `Entre ${$("#rangeThreshold").value}% y 99,9% del objetivo.` : "Semana y filtro de AM actuales.";
+  $("#listBody").innerHTML=list.length?list.map(c=>{
+    const w=weakestMetric(c);
+    return `<div class="listitem"><div><b>${esc(c.center)}</b><div class="small">${esc(c.am)} · foco: ${c.hasReal?(w?w.m.label:"—"):"pendiente de carga"}</div></div><div><b>${pct(c.attain)}</b><div class="small">${c.delta==null?"":`${c.delta>=0?"+":""}${fmt(c.delta)} uds.`}</div></div></div>`;
+  }).join(""):`<div class="empty">No hay centros en este grupo.</div>`;
+  openModal("#listModal");
+}
+
+function zoneKey(c){ return (c.zone || c.am || "SIN ZONA").trim(); }
+
+function zoneCentersAll(){
+  const w=currentWeek(); if(!w)return [];
+  return w.centers.map(summarizeCenter);
+}
+
+function refreshZoneSelector(preferred=null){
+  const zones=[...new Set(zoneCentersAll().map(zoneKey).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"es"));
+  $("#zoneSelect").innerHTML=zones.map(z=>`<option value="${esc(z)}">${esc(z)}</option>`).join("");
+  const am=$("#amSelect").value;
+  const pick=(preferred && zones.includes(preferred)) ? preferred : (am && zones.includes(am) ? am : zones[0]);
+  if(pick) $("#zoneSelect").value=pick;
+}
+
+let currentZoneCapturePage=1;
+
+function aggregateZone(list){
+  const metrics={};
+  let objective=0, real=0, hasAny=false;
+  METRICS.forEach(m=>{
+    let o=0,r=0,has=false;
+    list.forEach(c=>{
+      const x=c.metric[m.key];
+      o+=x.objective||0;
+      if(x.real!=null){r+=x.real;has=true;hasAny=true;}
+    });
+    metrics[m.key]={objective:o,real:has?r:null,attain:has&&o>0?r/o*100:null,delta:has?r-o:null};
+    objective+=o;
+    if(has) real+=r;
+  });
+  return {metrics,objective,real:hasAny?real:null,attain:hasAny&&objective>0?real/objective*100:null,delta:hasAny?real-objective:null};
+}
+
+function renderZoneModal(){
+  const zone=$("#zoneSelect").value;
+  const all=zoneCentersAll();
+  const list=all.filter(c=>zoneKey(c)===zone);
+  const agg=aggregateZone(list);
+  const statuses={above:0,range:0,below:0,pending:0};
+  list.forEach(c=>statuses[statusOf(c)]++);
+
+  $("#zoneTitle").textContent=`Zona · ${zone || "—"}`;
+  $("#zoneSub").textContent=`Consolidado listo para capturar por zona sin ir local por local.`;
+  $("#zoneWeekLabel").textContent=`Semana ${currentWeek()?.label||""}`;
+
+  const summary = `
+    <div class="zone-summary">
+      <div class="zonebox"><b>${list.length}</b><span>Locales en esta zona</span></div>
+      <div class="zonebox"><b>${fmt(agg.metrics.drink.objective)}</b><span>Objetivo semana · 2ª bebida</span></div>
+      <div class="zonebox"><b>${fmt(agg.metrics.app.objective)}</b><span>Objetivo semana · Algo para picar</span></div>
+      <div class="zonebox"><b>${fmt(agg.metrics.coffee.objective)}</b><span>Objetivo semana · Café</span></div>
+      <div class="zonebox"><b>${fmt(agg.objective)}</b><span>Objetivo total sugeridas</span></div>
+    </div>`;
+
+  const half=Math.max(1,Math.ceil(list.length/2));
+  const totalPages=list.length<=half?1:2;
+  if(currentZoneCapturePage>totalPages) currentZoneCapturePage=1;
+  const pageItems=currentZoneCapturePage===1?list.slice(0,half):list.slice(half);
+
+  const pageBar = `
+    <div class="zone-pagebar">
+      <div>
+        <div class="zone-capture-note">Cada tarjeta muestra el <b>nombre del local</b> y el <b>objetivo de la siguiente semana</b> para 2ª bebida, algo para picar y café. Diseñado para sacar la zona completa en 2 pantallazos.</div>
+      </div>
+      <div class="zone-pagebuttons">
+        <span class="small">Pantallazo</span>
+        <button class="zone-pagebtn ${currentZoneCapturePage===1?'active':''}" data-zone-page="1" type="button">1</button>
+        ${totalPages===2?`<button class="zone-pagebtn ${currentZoneCapturePage===2?'active':''}" data-zone-page="2" type="button">2</button>`:''}
+      </div>
+    </div>`;
+
+  const locals = pageItems.length ? `<div class="zone-capture-cardgrid">${pageItems.map(c=>{
+    const st=statusMeta(statusOf(c));
+    const totalObjective = METRICS.reduce((acc,m)=>acc + (c.metric[m.key].objective||0), 0);
+    return `<section class="zone-capture-card">
+      <div class="zone-capture-top">
+        <div>
+          <h4>${esc(c.center)}</h4>
+          <div class="zone-capture-meta">AM ${esc(c.am)} · <span class="badge ${st.cls}">${st.icon} ${st.label}</span></div>
+        </div>
+        <div style="text-align:right">
+          <div class="small">objetivo total</div>
+          <b style="font-size:24px">${fmt(totalObjective)}</b>
+        </div>
+      </div>
+      <div class="zone-targets">
+        ${METRICS.map(m=>`<div class="zone-target"><b>${fmt(c.metric[m.key].objective)}</b><span>${m.icon} ${m.label}</span></div>`).join('')}
+      </div>
+      <div class="zone-total-target">
+        <span class="small">Objetivo de la siguiente semana</span>
+        <b>${fmt(totalObjective)}</b>
+      </div>
+    </section>`;
+  }).join('')}</div>` : `<div class="empty">No hay locales para esta zona.</div>`;
+
+  $("#zoneBody").innerHTML=summary+pageBar+locals;
+  document.querySelectorAll("[data-zone-page]").forEach(btn=>btn.onclick=()=>{currentZoneCapturePage=Number(btn.dataset.zonePage||1);renderZoneModal();});
+}
+
+function openZoneModal(){
+  refreshZoneSelector();
+  currentZoneCapturePage=1;
+  renderZoneModal();
+  openModal("#zoneModal");
+}
+
+function openCenter(name,centers){
+  const c=centers.find(x=>x.center===name); if(!c)return;
+  const st=statusMeta(statusOf(c)), weak=weakestMetric(c);
+  $("#centerTitle").textContent=c.center;
+  $("#centerSub").textContent=`AM ${c.am} · ${st.label}`;
+  const boxes=METRICS.map(m=>{const x=c.metric[m.key];return `<div class="detailbox"><b>${pct(x.attain)}</b><span>${m.icon} ${m.label} · ${x.real==null?"sin real":`${fmt(x.real)} / ${fmt(x.objective)}`}</span></div>`;}).join("");
+  const focus=!c.hasReal?`Esperar carga de REAL antes de evaluar el centro.`:(statusOf(c)==="above"?`Objetivo superado. Identificar qué práctica comercial explica el resultado y replicarla.`:`Foco recomendado: <b>${weak.m.label}</b>. ${weak.m.hint}`);
+  const dayRows=DAYS.map(d=>{
+    const dd=c.days[d];
+    return `<tr><td><b>${d}</b></td>${METRICS.map(m=>{
+      const o=num(dd.objective[m.key]), r=num(dd.real[m.key]), a=(r!=null&&o>0)?r/o*100:null;
+      return `<td>${fmt(o)}</td><td>${fmt(r)}</td><td><b style="color:${metricColor(a)}">${pct(a)}</b></td>`;
+    }).join("")}</tr>`;
+  }).join("");
+  const weeklyEuro=euroForCenter(c.center);
+  $("#centerBody").innerHTML=`<div class="detailgrid"><div class="detailbox"><b>${pct(c.attain)}</b><span>Cumplimiento total</span></div>${boxes}<div class="detailbox"><b>${fmtEur(weeklyEuro)}</b><span>💶 Venta sugerida semanal · ${esc(normalizeWeekLabel(currentWeek()?.label)||"")}</span></div></div>
+  <div class="notice" style="margin:0 0 16px">${focus}</div>
+  <div class="tablewrap"><table class="daytable"><thead><tr><th>Día</th><th>Obj. 2ª bebida</th><th>Real</th><th>%</th><th>Obj. picar</th><th>Real</th><th>%</th><th>Obj. café</th><th>Real</th><th>%</th></tr></thead><tbody>${dayRows}</tbody></table></div>`;
+  openModal("#centerModal");
+}
+function openModal(sel){document.querySelector(sel).classList.add("open")}
+function closeModals(){document.querySelectorAll(".modalback").forEach(m=>m.classList.remove("open"))}
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=closeModals);
+document.querySelectorAll(".modalback").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModals()}));
+
+function refreshSelectors(preferredWeek=null){
+  const ws=Object.keys(DATA).filter(isObjectiveSheet);
+  $("#weekSelect").innerHTML=ws.map(x=>`<option value="${esc(x)}">${esc(x.replace(/^OBJ\s+VS\s+REAL\s*/i,""))}</option>`).join("");
+  if(preferredWeek && ws.includes(preferredWeek)) $("#weekSelect").value=preferredWeek;
+  const ams=[...new Set(ws.flatMap(w=>DATA[w].centers.map(c=>c.am)).filter(Boolean))].sort();
+  $("#amSelect").innerHTML=`<option value="">Todos los AM</option>`+ams.map(a=>`<option>${esc(a)}</option>`).join("");
+}
+function saveDataLocally(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+
+function saveEuroLocally(){
+  try{
+    localStorage.setItem(EURO_STORAGE_KEY, JSON.stringify(EURO_DATA));
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function restoreLocalEuro(){
+  try{
+    const raw=localStorage.getItem(EURO_STORAGE_KEY);
+    if(!raw) return false;
+    const parsed=JSON.parse(raw);
+    if(parsed && typeof parsed==="object"){
+      EURO_DATA={...EMBEDDED_EURO_DATA,...parsed};
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+function saveSummaryLocally(){
+  try{
+    localStorage.setItem(SUMMARY_STORAGE_KEY, JSON.stringify(SUMMARY_DATA));
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function restoreLocalSummary(){
+  try{
+    const raw=localStorage.getItem(SUMMARY_STORAGE_KEY);
+    if(!raw) return false;
+    const parsed=JSON.parse(raw);
+    if(parsed && typeof parsed==="object"){
+      SUMMARY_DATA={...EMBEDDED_SUMMARY,...parsed};
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+function restoreLocalData(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const parsed=JSON.parse(raw);
+    if(parsed && typeof parsed==="object" && Object.keys(parsed).some(isObjectiveSheet)){
+      DATA=parsed;
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+function parseSheet(rows,name){
+  const centers=[];
+  for(let r=2;r<Math.min(rows.length,51);r++){
+    const row=rows[r]||[]; const center=row[1]; if(center==null||String(center).trim()==="")continue;
+    const rec={am:String(row[0]??"").trim(),zone:String(row[0]??"").trim(),center:String(center).trim(),days:{}};
+    DAYS.forEach((day,di)=>{
+      const st=2+9*di;
+      rec.days[day]={objective:{drink:num(row[st]),app:num(row[st+1]),coffee:num(row[st+2])},real:{drink:num(row[st+3]),app:num(row[st+4]),coffee:num(row[st+5])}};
+    });
+    centers.push(rec);
+  }
+  return {label:name.replace("OBJ VS REAL ",""),centers};
+}
+$("#openZone").onclick=openZoneModal;
+$("#zoneSelect").onchange=()=>{currentZoneCapturePage=1;renderZoneModal();};
+$("#toggleCapture").onclick=()=>{
+  const modal=$("#zoneModal");
+  modal.classList.toggle("zone-capture-mode");
+  $("#toggleCapture").textContent=modal.classList.contains("zone-capture-mode")?"Salir vista captura":"Vista captura";
+};
+$("#printZone").onclick=()=>window.print();
+$("#openImport").onclick=()=>openModal("#importModal");
+$("#fileInput").onchange=async(e)=>{
+  const f=e.target.files?.[0]; if(!f)return;
+  const status=$("#importStatus");
+  try{
+    if(typeof XLSX==="undefined") throw new Error("No se pudo cargar el lector XLSX. Comprueba conexión a internet y vuelve a abrir el HTML.");
+    status.textContent="Leyendo archivo y detectando semanas…";
+    const buf=await f.arrayBuffer();
+    const wb=XLSX.read(buf,{type:"array",cellDates:false});
+    const sheets=objectiveSheetsFromWorkbook(wb);
+    const parsedEuro=parseEuroExportSheet(wb);
+    if(!sheets.length && !parsedEuro) throw new Error('No se encontró ninguna pestaña "OBJ VS REAL" ni un Export válido con LOCAL + € TOTAL VS.');
+
+    const next={...DATA};
+    for(const s of sheets){
+      const rows=XLSX.utils.sheet_to_json(
+        wb.Sheets[s],
+        {header:1,raw:true,defval:null,range:"A1:BR200"}
+      );
+      next[s]=parseSheet(rows,s);
+    }
+
+    const parsedSummary=parseSummarySheet(wb,sheets);
+    SUMMARY_DATA={...SUMMARY_DATA,...parsedSummary};
+    if(parsedEuro) EURO_DATA={...EURO_DATA,[parsedEuro.label]:parsedEuro};
+    DATA=next;
+
+    const newest=sheets.length?sheets[sheets.length-1]:null;
+    if(newest) refreshSelectors(newest);
+    render();
+
+    const persisted=saveDataLocally();
+    const summaryPersisted=saveSummaryLocally();
+    const euroPersisted=saveEuroLocally();
+
+    const ignored=wb.SheetNames.filter(s=>!isObjectiveSheet(s) && !["RESUMEN","EXPORT"].includes(String(s).trim().toUpperCase()));
+    const summaryCount=Object.keys(parsedSummary).length;
+    status.textContent =
+      `Importación correcta.` +
+      (sheets.length ? ` ${sheets.length} semana(s) OBJ VS REAL detectada(s): ${sheets.join(" · ")}.` : "") +
+      (summaryCount ? ` RESUMEN mapeado para ${summaryCount} semana(s).` : "") +
+      (parsedEuro ? ` Venta sugerida € por local mapeada a ${parsedEuro.label} (${fmtEur(parsedEuro.total)}).` : "") +
+      (ignored.length ? ` ${ignored.length} pestaña(s) adicionales ignorada(s).` : "") +
+      ((persisted||summaryPersisted||euroPersisted) ? " Datos guardados en este navegador." : "");
+
+    setTimeout(closeModals,900);
+  }catch(err){
+    status.innerHTML=`<span style="color:var(--red)">${esc(err.message)}</span>`;
+  }finally{
+    e.target.value="";
+  }
+};
+$("#weekSelect").onchange=()=>{render(); if($("#zoneModal").classList.contains("open")){refreshZoneSelector();renderZoneModal();}};
+$("#amSelect").onchange=render;
+$("#rangeThreshold").onchange=render;
+$("#search").oninput=render;
+
+restoreLocalData();
+restoreLocalSummary();
+restoreLocalEuro();
+refreshSelectors();
+render();
+</script>
+</body>
+</html>
